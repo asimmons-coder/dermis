@@ -10,7 +10,8 @@ import {
   Users,
   Bell,
   Search,
-  Command
+  Command,
+  Zap
 } from 'lucide-react'
 import ProviderSelector from './ProviderSelector'
 import GlobalSearch from './GlobalSearch'
@@ -151,6 +152,17 @@ export default function AppHeader() {
                 </>
               )}
             </div>
+            <Link
+              href="/integrations"
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                isActive('/integrations')
+                  ? 'bg-dermis-100 text-dermis-700'
+                  : 'text-clinical-600 hover:text-clinical-800 hover:bg-clinical-50'
+              }`}
+            >
+              <Zap className="w-4 h-4" />
+              Integrations
+            </Link>
           </nav>
 
           {/* Right: Search + Sign In */}
