@@ -94,6 +94,9 @@ export default function PatientProductsPage() {
   const [isGeneratingRoutine, setIsGeneratingRoutine] = useState(false)
   const [hasGeneratedRoutine, setHasGeneratedRoutine] = useState(false)
   const [selectedConcerns, setSelectedConcerns] = useState<string[]>([])
+  const [providerNotes, setProviderNotes] = useState('')
+  const [isAddingAll, setIsAddingAll] = useState(false)
+  const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set())
 
   const commonConcerns = ['Acne', 'Anti-aging', 'Hyperpigmentation', 'Rosacea', 'Sensitive skin', 'Dryness']
 
@@ -162,7 +165,8 @@ export default function PatientProductsPage() {
           patientId: patient.id,
           skinType: getSkinTypeDescription(patient.skinType),
           concerns: selectedConcerns,
-          age: patient.age
+          age: patient.age,
+          providerNotes: providerNotes
         })
       })
 
@@ -257,6 +261,55 @@ export default function PatientProductsPage() {
       }
     } catch (err) {
       console.error('Failed to remove product:', err)
+    }
+  }
+
+  // Add all products to regimen
+  const handleAddAllToRegimen = async () => {
+    const uniqueProducts = new Map<string, Product>()
+    amRoutine.forEach(p => uniqueProducts.set(p.id, p))
+    pmRoutine.forEach(p => uniqueProducts.set(p.id, p))
+
+    // Filter out products already in regimen
+    const productsToAdd = Array.from(uniqueProducts.values()).filter(
+      p => !isProductInRegimen(p.id)
+    )
+
+    if (productsToAdd.length === 0) {
+      alert('All products are already in the regimen!')
+      return
+    }
+
+    setIsAddingAll(true)
+    const newlyAdded = new Set<string>()
+
+    try {
+      for (const product of productsToAdd) {
+        const response = await fetch(`/api/patients/${patientId}/products`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            product_id: product.id,
+            frequency: 'Daily',
+            time_of_day: product.timeOfDay === 'AM' ? 'AM' : product.timeOfDay === 'PM' ? 'PM' : 'Both',
+            notes: product.recommendation_reason || ''
+          })
+        })
+
+        if (response.ok) {
+          newlyAdded.add(product.id)
+        }
+      }
+
+      await loadPatientProducts()
+      setRecentlyAdded(newlyAdded)
+
+      // Clear the "recently added" highlight after 3 seconds
+      setTimeout(() => setRecentlyAdded(new Set()), 3000)
+    } catch (err) {
+      console.error('Failed to add products:', err)
+    } finally {
+      setIsAddingAll(false)
     }
   }
 
@@ -417,6 +470,19 @@ export default function PatientProductsPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Provider Notes */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-clinical-700 mb-2">
+              Provider Notes (Optional)
+            </label>
+            <textarea
+              value={providerNotes}
+              onChange={(e) => setProviderNotes(e.target.value)}
+              placeholder="Add any additional context for the AI... (e.g., 'Patient prefers fragrance-free products', 'Currently on isotretinoin', 'Budget conscious')"
+              className="input w-full min-h-[80px] resize-none text-sm"
+            />
           </div>
 
           {/* Generate Button */}
@@ -599,17 +665,62 @@ export default function PatientProductsPage() {
               </div>
             </div>
 
-            {/* Total Cost (unique products only) */}
-            <div className="card p-6 bg-gradient-to-br from-clinical-800 to-clinical-900 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-display font-semibold text-lg mb-1">Complete Routine Cost</h3>
-                  <p className="text-clinical-300 text-sm">
-                    {new Set([...amRoutine.map(p => p.id), ...pmRoutine.map(p => p.id)]).size} unique products
-                  </p>
+            {/* Total Cost and Actions */}
+            <div className="card overflow-hidden">
+              <div className="p-6 bg-gradient-to-br from-clinical-800 to-clinical-900 text-white">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="font-display font-semibold text-lg mb-1">Complete Routine Cost</h3>
+                    <p className="text-clinical-300 text-sm">
+                      {new Set([...amRoutine.map(p => p.id), ...pmRoutine.map(p => p.id)]).size} unique products
+                    </p>
+                  </div>
+                  <div className="text-3xl font-bold">
+                    ${calculateRoutineCost().toFixed(2)}
+                  </div>
                 </div>
-                <div className="text-3xl font-bold">
-                  ${calculateRoutineCost().toFixed(2)}
+
+                {/* Add All Button */}
+                <button
+                  onClick={handleAddAllToRegimen}
+                  disabled={isAddingAll || [...amRoutine, ...pmRoutine].every(p => isProductInRegimen(p.id))}
+                  className="w-full py-3 bg-white text-clinical-800 rounded-lg font-semibold hover:bg-clinical-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isAddingAll ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Adding Products...
+                    </>
+                  ) : [...amRoutine, ...pmRoutine].every(p => isProductInRegimen(p.id)) ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      All Products in Regimen
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      Add All Products to {patient.firstName}'s Regimen
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Where products go info */}
+              <div className="px-6 py-4 bg-clinical-50 border-t border-clinical-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-dermis-100 flex items-center justify-center">
+                    <ShoppingBag className="w-4 h-4 text-dermis-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-clinical-700">
+                      Products are saved to <strong>{patient.firstName}'s regimen</strong> and will appear on their checkout summary.
+                    </p>
+                  </div>
+                  {patientProducts.length > 0 && (
+                    <span className="px-3 py-1 bg-dermis-100 text-dermis-700 text-sm font-medium rounded-full">
+                      {patientProducts.length} in regimen
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

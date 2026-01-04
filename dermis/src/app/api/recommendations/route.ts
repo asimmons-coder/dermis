@@ -18,12 +18,13 @@ interface RecommendationRequest {
   currentTreatments?: string[]
   concerns?: string[]
   age?: number
+  providerNotes?: string
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: RecommendationRequest = await request.json()
-    const { patientId, skinType, conditions, currentTreatments, concerns, age } = body
+    const { patientId, skinType, conditions, currentTreatments, concerns, age, providerNotes } = body
 
     // Fetch all products
     const { data: products, error } = await supabase
@@ -65,7 +66,8 @@ export async function POST(request: NextRequest) {
       age: patientAge,
       skinCancerHistory: patientData?.skin_cancer_history,
       allergies: patientData?.allergies,
-      patientName: patientData ? `${patientData.first_name} ${patientData.last_name}` : undefined
+      patientName: patientData ? `${patientData.first_name} ${patientData.last_name}` : undefined,
+      providerNotes: providerNotes
     })
 
     return NextResponse.json(aiRecommendations)
@@ -92,8 +94,9 @@ async function generateAIRecommendations(params: {
   skinCancerHistory?: boolean
   allergies?: any[]
   patientName?: string
+  providerNotes?: string
 }) {
-  const { products, skinType, conditions, currentTreatments, concerns, age, skinCancerHistory, allergies, patientName } = params
+  const { products, skinType, conditions, currentTreatments, concerns, age, skinCancerHistory, allergies, patientName, providerNotes } = params
 
   // If no products available, return empty
   if (!products || products.length === 0) {
@@ -130,6 +133,7 @@ ${patientName ? `- Name: ${patientName}` : '- Name: Not specified'}
 - Concerns: ${concerns.length > 0 ? concerns.join(', ') : 'None specified'}
 - Current Treatments: ${currentTreatments.length > 0 ? currentTreatments.join(', ') : 'None'}
 - Allergies: ${allergies && allergies.length > 0 ? JSON.stringify(allergies) : 'None known'}
+${providerNotes ? `\nPROVIDER NOTES:\n${providerNotes}` : ''}
 
 AVAILABLE PRODUCTS:
 ${JSON.stringify(productCatalog, null, 2)}
@@ -141,6 +145,7 @@ Create a personalized routine with these requirements:
 4. Consider age-appropriate treatments (retinoids for 30+, gentler for sensitive skin)
 5. Prioritize sun protection if skin cancer history exists
 6. Match product types to concerns (e.g., salicylic acid for acne, vitamin C for hyperpigmentation)
+7. IMPORTANT: If provider notes are included, incorporate those specific preferences and considerations into your recommendations
 
 Return ONLY valid JSON in this exact format:
 {
