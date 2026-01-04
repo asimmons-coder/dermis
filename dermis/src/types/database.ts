@@ -356,3 +356,33 @@ export interface AuditLogEntry {
   user_agent?: string;
   created_at: string;
 }
+
+export interface Prescription {
+  id: string;
+  patient_id: string;
+  provider_id?: string;
+  encounter_id?: string;
+  medication_name: string;
+  medication_strength?: string;
+  medication_form?: string; // tablet, cream, gel, solution, etc.
+  sig: string; // directions
+  quantity: number;
+  quantity_unit?: string;
+  days_supply?: number;
+  refills: number;
+  daw: boolean; // dispense as written
+  pharmacy_name?: string;
+  pharmacy_phone?: string;
+  pharmacy_address?: string;
+  pharmacy_ncpdp_id?: string;
+  status: 'draft' | 'pending' | 'sent' | 'filled' | 'cancelled';
+  sent_at?: string;
+  sent_via?: 'erx' | 'fax' | 'print';
+  erx_reference_id?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  patient?: Patient;
+  provider?: Provider;
+}

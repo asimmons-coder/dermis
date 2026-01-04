@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   CheckCircle,
   AlertCircle,
@@ -21,7 +22,11 @@ import {
   ChevronRight,
   Send,
   Download,
-  Upload
+  Upload,
+  Search,
+  X,
+  Loader2,
+  User
 } from 'lucide-react'
 import AppHeader from '@/components/AppHeader'
 
@@ -212,9 +217,56 @@ const RECENT_ACTIVITY: RecentActivity[] = [
   }
 ]
 
+interface PatientSearchResult {
+  id: string
+  firstName: string
+  lastName: string
+  mrn: string
+  dateOfBirth: string
+}
+
 export default function IntegrationsPage() {
+  const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // Patient search for quick actions
+  const [showPatientSearch, setShowPatientSearch] = useState(false)
+  const [patientSearchQuery, setPatientSearchQuery] = useState('')
+  const [patientSearchResults, setPatientSearchResults] = useState<PatientSearchResult[]>([])
+  const [isSearchingPatients, setIsSearchingPatients] = useState(false)
+
+  useEffect(() => {
+    if (patientSearchQuery.length >= 2) {
+      const timer = setTimeout(() => {
+        searchPatients()
+      }, 300)
+      return () => clearTimeout(timer)
+    } else {
+      setPatientSearchResults([])
+    }
+  }, [patientSearchQuery])
+
+  const searchPatients = async () => {
+    setIsSearchingPatients(true)
+    try {
+      const response = await fetch(`/api/patients?search=${encodeURIComponent(patientSearchQuery)}`)
+      if (response.ok) {
+        const data = await response.json()
+        setPatientSearchResults(data.patients || [])
+      }
+    } catch (err) {
+      console.error('Failed to search patients:', err)
+    } finally {
+      setIsSearchingPatients(false)
+    }
+  }
+
+  const handlePatientSelect = (patientId: string) => {
+    setShowPatientSearch(false)
+    setPatientSearchQuery('')
+    router.push(`/patients/${patientId}/prescriptions`)
+  }
 
   const categories = [
     { key: 'all', label: 'All Integrations', icon: Zap },
@@ -520,7 +572,10 @@ export default function IntegrationsPage() {
                   </div>
                   <ArrowRight className="w-4 h-4 text-clinical-400" />
                 </Link>
-                <button className="w-full flex items-center justify-between p-3 bg-clinical-50 rounded-lg hover:bg-clinical-100 transition-colors">
+                <button
+                  onClick={() => setShowPatientSearch(true)}
+                  className="w-full flex items-center justify-between p-3 bg-clinical-50 rounded-lg hover:bg-clinical-100 transition-colors"
+                >
                   <div className="flex items-center gap-3">
                     <Pill className="w-5 h-5 text-purple-600" />
                     <span className="text-sm font-medium text-clinical-800">New Prescription</span>
@@ -570,6 +625,88 @@ export default function IntegrationsPage() {
           </div>
         </div>
       </main>
+
+      {/* Patient Search Modal for Prescriptions */}
+      {showPatientSearch && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+            <div className="px-6 py-4 border-b border-clinical-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                  <Pill className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-display font-semibold text-clinical-800">New Prescription</h3>
+                  <p className="text-sm text-clinical-600">Search for a patient to prescribe</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowPatientSearch(false)
+                  setPatientSearchQuery('')
+                }}
+                className="text-clinical-400 hover:text-clinical-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-clinical-400" />
+                <input
+                  type="text"
+                  value={patientSearchQuery}
+                  onChange={(e) => setPatientSearchQuery(e.target.value)}
+                  placeholder="Search by name or MRN..."
+                  className="input pl-10 w-full"
+                  autoFocus
+                />
+                {isSearchingPatients && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-clinical-400 animate-spin" />
+                )}
+              </div>
+
+              <div className="mt-4 max-h-80 overflow-y-auto">
+                {patientSearchResults.length === 0 && patientSearchQuery.length >= 2 && !isSearchingPatients && (
+                  <div className="text-center py-8 text-clinical-500">
+                    <User className="w-8 h-8 mx-auto mb-2 text-clinical-300" />
+                    <p>No patients found</p>
+                  </div>
+                )}
+                {patientSearchResults.length === 0 && patientSearchQuery.length < 2 && (
+                  <div className="text-center py-8 text-clinical-500">
+                    <Search className="w-8 h-8 mx-auto mb-2 text-clinical-300" />
+                    <p>Type at least 2 characters to search</p>
+                  </div>
+                )}
+                {patientSearchResults.map((patient) => (
+                  <button
+                    key={patient.id}
+                    onClick={() => handlePatientSelect(patient.id)}
+                    className="w-full p-4 text-left hover:bg-clinical-50 rounded-lg border border-clinical-100 mb-2 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-dermis-100 flex items-center justify-center">
+                        <User className="w-5 h-5 text-dermis-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-clinical-800">
+                          {patient.firstName} {patient.lastName}
+                        </div>
+                        <div className="text-sm text-clinical-500">
+                          MRN: {patient.mrn} • DOB: {new Date(patient.dateOfBirth).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-clinical-400" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

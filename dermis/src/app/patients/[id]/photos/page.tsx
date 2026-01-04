@@ -18,7 +18,9 @@ import {
   CheckCircle,
   FileText,
   Sparkles,
-  User
+  User,
+  Pill,
+  CreditCard
 } from 'lucide-react'
 
 interface PatientPhoto {
@@ -296,27 +298,41 @@ export default function PatientPhotosPage() {
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex items-center gap-1 border-b border-clinical-200 -mb-px">
+          <div className="flex items-center gap-1 border-b border-clinical-200 -mb-px overflow-x-auto">
             <Link
               href={`/patients/${patientId}`}
-              className="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-2"
+              className="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-2 whitespace-nowrap"
             >
               <FileText className="w-4 h-4" />
               Chart
             </Link>
             <Link
               href={`/patients/${patientId}/photos`}
-              className="px-4 py-2 text-sm font-medium border-b-2 border-accent-sky text-accent-sky flex items-center gap-2"
+              className="px-4 py-2 text-sm font-medium border-b-2 border-accent-sky text-accent-sky flex items-center gap-2 whitespace-nowrap"
             >
               <Camera className="w-4 h-4" />
               Photos
             </Link>
             <Link
               href={`/patients/${patientId}/cosmetic`}
-              className="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-2"
+              className="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-2 whitespace-nowrap"
             >
               <Sparkles className="w-4 h-4" />
               Cosmetic
+            </Link>
+            <Link
+              href={`/patients/${patientId}/prescriptions`}
+              className="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-2 whitespace-nowrap"
+            >
+              <Pill className="w-4 h-4" />
+              Prescriptions
+            </Link>
+            <Link
+              href={`/patients/${patientId}/products`}
+              className="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-2 whitespace-nowrap"
+            >
+              <CreditCard className="w-4 h-4" />
+              Products
             </Link>
           </div>
         </div>
