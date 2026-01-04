@@ -16,7 +16,10 @@ import {
   CheckCircle,
   AlertCircle,
   FileText,
-  User
+  User,
+  SlidersHorizontal,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 
 interface TreatmentZone {
@@ -84,6 +87,12 @@ export default function CosmeticPage() {
   const [uploadingAngle, setUploadingAngle] = useState<string | null>(null)
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({})
+
+  // Before/After Comparison states
+  const [showComparison, setShowComparison] = useState(false)
+  const [comparisonAngle, setComparisonAngle] = useState<string>('front')
+  const [sliderPosition, setSliderPosition] = useState(50)
+  const comparisonRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     loadData()
@@ -256,6 +265,31 @@ export default function CosmeticPage() {
 
   const getPhotoForAngle = (angle: string, photos: CosmeticPhoto[]) => {
     return photos.find(p => p.body_location_detail === angle)
+  }
+
+  const handleComparisonSlider = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    if (!comparisonRef.current) return
+
+    const rect = comparisonRef.current.getBoundingClientRect()
+    let clientX: number
+
+    if ('touches' in e) {
+      clientX = e.touches[0].clientX
+    } else {
+      clientX = e.clientX
+    }
+
+    const x = clientX - rect.left
+    const percentage = Math.min(Math.max((x / rect.width) * 100, 0), 100)
+    setSliderPosition(percentage)
+  }
+
+  const hasComparisonPhotos = (angle: string) => {
+    return getPhotoForAngle(angle, beforePhotos) && getPhotoForAngle(angle, afterPhotos)
+  }
+
+  const getAvailableComparisonAngles = () => {
+    return BEFORE_PHOTO_ANGLES.filter(angle => hasComparisonPhotos(angle.key))
   }
 
   return (
@@ -582,6 +616,122 @@ export default function CosmeticPage() {
                 })}
               </div>
             </div>
+
+            {/* Before/After Comparison */}
+            {getAvailableComparisonAngles().length > 0 && (
+              <div className="card p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-accent-violet to-purple-600 flex items-center justify-center">
+                      <SlidersHorizontal className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-display font-semibold text-clinical-800">
+                        Before / After Comparison
+                      </h2>
+                      <p className="text-sm text-clinical-500">
+                        Drag the slider to compare results
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowComparison(!showComparison)}
+                    className={`btn-${showComparison ? 'primary' : 'secondary'} text-sm`}
+                  >
+                    {showComparison ? 'Hide Comparison' : 'Show Comparison'}
+                  </button>
+                </div>
+
+                {showComparison && (
+                  <div className="space-y-4">
+                    {/* Angle Selector */}
+                    <div className="flex items-center gap-2 justify-center">
+                      {getAvailableComparisonAngles().map((angle) => (
+                        <button
+                          key={angle.key}
+                          onClick={() => setComparisonAngle(angle.key)}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                            comparisonAngle === angle.key
+                              ? 'bg-accent-violet text-white'
+                              : 'bg-clinical-100 text-clinical-600 hover:bg-clinical-200'
+                          }`}
+                        >
+                          {angle.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Comparison Slider */}
+                    <div
+                      ref={comparisonRef}
+                      className="relative w-full max-w-2xl mx-auto aspect-[4/3] rounded-xl overflow-hidden cursor-col-resize select-none shadow-lg"
+                      onMouseDown={(e) => {
+                        handleComparisonSlider(e)
+                        const handleMove = (moveEvent: MouseEvent) => {
+                          handleComparisonSlider(moveEvent as unknown as React.MouseEvent<HTMLDivElement>)
+                        }
+                        const handleUp = () => {
+                          document.removeEventListener('mousemove', handleMove)
+                          document.removeEventListener('mouseup', handleUp)
+                        }
+                        document.addEventListener('mousemove', handleMove)
+                        document.addEventListener('mouseup', handleUp)
+                      }}
+                      onTouchStart={handleComparisonSlider}
+                      onTouchMove={handleComparisonSlider}
+                    >
+                      {/* After Image (Background) */}
+                      <div className="absolute inset-0">
+                        <img
+                          src={getPhotoForAngle(comparisonAngle, afterPhotos)?.url}
+                          alt="After"
+                          className="w-full h-full object-cover"
+                          draggable={false}
+                        />
+                        <div className="absolute top-4 right-4 px-3 py-1 bg-green-500 text-white text-sm font-medium rounded-full shadow">
+                          After
+                        </div>
+                      </div>
+
+                      {/* Before Image (Clipped) */}
+                      <div
+                        className="absolute inset-0 overflow-hidden"
+                        style={{ width: `${sliderPosition}%` }}
+                      >
+                        <img
+                          src={getPhotoForAngle(comparisonAngle, beforePhotos)?.url}
+                          alt="Before"
+                          className="w-full h-full object-cover"
+                          style={{ width: comparisonRef.current ? `${comparisonRef.current.offsetWidth}px` : '100%' }}
+                          draggable={false}
+                        />
+                        <div className="absolute top-4 left-4 px-3 py-1 bg-clinical-700 text-white text-sm font-medium rounded-full shadow">
+                          Before
+                        </div>
+                      </div>
+
+                      {/* Slider Handle */}
+                      <div
+                        className="absolute top-0 bottom-0 w-1 bg-white shadow-lg cursor-col-resize"
+                        style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
+                      >
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center">
+                          <div className="flex items-center gap-0.5">
+                            <ChevronLeft className="w-4 h-4 text-clinical-600" />
+                            <ChevronRight className="w-4 h-4 text-clinical-600" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Instructions */}
+                    <p className="text-center text-sm text-clinical-500">
+                      Drag the slider left and right to compare before and after photos
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Save Button */}
             <div className="card p-6">

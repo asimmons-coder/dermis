@@ -25,6 +25,7 @@ interface Product {
   step?: number
   timeOfDay?: string
   category_step?: string
+  recommendation_reason?: string
 }
 
 interface Patient {
@@ -41,6 +42,7 @@ export default function RecommendationsPage() {
   const [amRoutine, setAmRoutine] = useState<Product[]>([])
   const [pmRoutine, setPmRoutine] = useState<Product[]>([])
   const [targetedProducts, setTargetedProducts] = useState<Product[]>([])
+  const [aiReasoning, setAiReasoning] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [hasGenerated, setHasGenerated] = useState(false)
 
@@ -89,6 +91,7 @@ export default function RecommendationsPage() {
         setAmRoutine(data.amRoutine || [])
         setPmRoutine(data.pmRoutine || [])
         setTargetedProducts(data.targetedProducts || [])
+        setAiReasoning(data.aiReasoning || null)
         setHasGenerated(true)
       }
     } catch (err) {
@@ -149,6 +152,14 @@ export default function RecommendationsPage() {
                       </div>
                     )}
                   </div>
+                  {product.recommendation_reason && (
+                    <div className="mt-2 p-2 bg-dermis-50 rounded-lg border border-dermis-100">
+                      <div className="flex items-start gap-2">
+                        <Sparkles className="w-3 h-3 text-dermis-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-dermis-700">{product.recommendation_reason}</p>
+                      </div>
+                    </div>
+                  )}
                   {product.usage_instructions && (
                     <p className="text-sm text-clinical-600 mt-2">{product.usage_instructions}</p>
                   )}
@@ -279,28 +290,45 @@ export default function RecommendationsPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Summary */}
+                {/* AI Summary */}
                 <div className="card p-6 bg-gradient-to-br from-dermis-50 to-white border-dermis-200">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-display font-semibold text-lg text-clinical-900 mb-1">
-                        Personalized Routine
-                      </h3>
-                      <p className="text-sm text-clinical-600">
-                        {skinType} skin • {concerns.length} concern{concerns.length !== 1 ? 's' : ''}
-                      </p>
-                      {concerns.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {concerns.map(concern => (
-                            <span key={concern} className="px-2 py-1 bg-dermis-100 text-dermis-700 text-xs font-medium rounded">
-                              {concern}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-dermis-500 to-purple-600 flex items-center justify-center">
+                        <Sparkles className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-display font-semibold text-lg text-clinical-900">
+                          AI-Personalized Routine
+                        </h3>
+                        <p className="text-sm text-clinical-600">
+                          {skinType} skin • {concerns.length} concern{concerns.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
                     </div>
                     <CheckCircle className="w-8 h-8 text-dermis-600" />
                   </div>
+
+                  {aiReasoning && (
+                    <div className="p-4 bg-white rounded-lg border border-dermis-200 mb-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-dermis-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Sparkles className="w-3 h-3 text-dermis-600" />
+                        </div>
+                        <p className="text-clinical-700 leading-relaxed">{aiReasoning}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {concerns.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {concerns.map(concern => (
+                        <span key={concern} className="px-2 py-1 bg-dermis-100 text-dermis-700 text-xs font-medium rounded">
+                          {concern}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* AM Routine */}
