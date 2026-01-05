@@ -22,7 +22,14 @@ import {
   DollarSign,
   ShieldCheck,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Stethoscope,
+  Syringe,
+  CreditCard,
+  BarChart3,
+  PieChart,
+  Target,
+  Wallet
 } from 'lucide-react'
 import { useProvider } from '@/contexts/ProviderContext'
 import AppHeader from '@/components/AppHeader'
@@ -120,6 +127,48 @@ const PRACTICE_ALERTS: PracticeAlert[] = [
     actionHref: '/compliance/isotretinoin'
   }
 ]
+
+// Practice Analytics mock data
+const PRACTICE_ANALYTICS = {
+  revenue: {
+    mtd: 187450,
+    lastMonth: 173200,
+    ytd: 2145000,
+    target: 2400000,
+    breakdown: {
+      medical: 142300,
+      cosmetic: 45150
+    }
+  },
+  patients: {
+    total: 4823,
+    activeThisMonth: 312,
+    newThisMonth: 47,
+    retention: 94.2
+  },
+  procedures: {
+    mtd: 186,
+    avgPerDay: 8.2,
+    topProcedures: [
+      { name: 'Skin Biopsy', count: 48, revenue: 14400 },
+      { name: 'Cryotherapy', count: 62, revenue: 8060 },
+      { name: 'Excision', count: 23, revenue: 18400 },
+      { name: 'Mohs Surgery', count: 8, revenue: 32000 },
+      { name: 'Botox', count: 34, revenue: 17000 },
+      { name: 'Filler', count: 11, revenue: 8800 }
+    ]
+  },
+  collections: {
+    rate: 96.8,
+    outstanding: 24350,
+    avgDaysToCollect: 18
+  },
+  providers: [
+    { name: 'Dr. Sarah Chen', patients: 156, revenue: 94200, procedures: 98 },
+    { name: 'Dr. Michael Park', patients: 132, revenue: 72400, procedures: 72 },
+    { name: 'NP Emily Rodriguez', patients: 24, revenue: 20850, procedures: 16 }
+  ]
+}
 
 export default function DashboardPage() {
   const { selectedProvider } = useProvider()
@@ -230,36 +279,270 @@ export default function DashboardPage() {
           </div>
         ) : data ? (
           <>
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="card p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-blue-600" />
+            {/* Practice Analytics Section */}
+            <div className="mb-8">
+              {/* Revenue & Key Metrics Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                {/* MTD Revenue */}
+                <div className="card p-5 bg-gradient-to-br from-emerald-50 to-white border-emerald-100">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm text-emerald-600 font-medium">MTD Revenue</p>
+                      <p className="text-2xl font-bold text-emerald-700 mt-1">
+                        ${PRACTICE_ANALYTICS.revenue.mtd.toLocaleString()}
+                      </p>
+                      <div className="flex items-center gap-1 mt-2">
+                        <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-xs text-emerald-600 font-medium">
+                          +{(((PRACTICE_ANALYTICS.revenue.mtd - PRACTICE_ANALYTICS.revenue.lastMonth) / PRACTICE_ANALYTICS.revenue.lastMonth) * 100).toFixed(1)}% vs last month
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-emerald-600" />
+                    </div>
                   </div>
-                  <span className="text-3xl font-bold text-clinical-900">{data.stats.todayAppointments}</span>
                 </div>
-                <h3 className="text-sm font-medium text-clinical-600">Today's Appointments</h3>
+
+                {/* Total Patients */}
+                <div className="card p-5 bg-gradient-to-br from-blue-50 to-white border-blue-100">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm text-blue-600 font-medium">Total Patients</p>
+                      <p className="text-2xl font-bold text-blue-700 mt-1">
+                        {PRACTICE_ANALYTICS.patients.total.toLocaleString()}
+                      </p>
+                      <div className="flex items-center gap-1 mt-2">
+                        <span className="text-xs text-blue-600">
+                          <span className="font-medium">+{PRACTICE_ANALYTICS.patients.newThisMonth}</span> new this month
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <Users className="w-5 h-5 text-blue-600" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Procedures MTD */}
+                <div className="card p-5 bg-gradient-to-br from-purple-50 to-white border-purple-100">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm text-purple-600 font-medium">Procedures MTD</p>
+                      <p className="text-2xl font-bold text-purple-700 mt-1">
+                        {PRACTICE_ANALYTICS.procedures.mtd}
+                      </p>
+                      <div className="flex items-center gap-1 mt-2">
+                        <span className="text-xs text-purple-600">
+                          Avg <span className="font-medium">{PRACTICE_ANALYTICS.procedures.avgPerDay}</span>/day
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <Syringe className="w-5 h-5 text-purple-600" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Collection Rate */}
+                <div className="card p-5 bg-gradient-to-br from-amber-50 to-white border-amber-100">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm text-amber-600 font-medium">Collection Rate</p>
+                      <p className="text-2xl font-bold text-amber-700 mt-1">
+                        {PRACTICE_ANALYTICS.collections.rate}%
+                      </p>
+                      <div className="flex items-center gap-1 mt-2">
+                        <span className="text-xs text-amber-600">
+                          ${PRACTICE_ANALYTICS.collections.outstanding.toLocaleString()} outstanding
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                      <Wallet className="w-5 h-5 text-amber-600" />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="card p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-                    <Edit className="w-6 h-6 text-amber-600" />
+              {/* Revenue Breakdown & Top Procedures */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Revenue Breakdown */}
+                <div className="card p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-clinical-800 flex items-center gap-2">
+                      <PieChart className="w-4 h-4 text-dermis-600" />
+                      Revenue Breakdown
+                    </h3>
+                    <span className="text-xs text-clinical-500">MTD</span>
                   </div>
-                  <span className="text-3xl font-bold text-clinical-900">{data.stats.unsignedCount}</span>
+
+                  {/* Visual Bar */}
+                  <div className="h-4 rounded-full overflow-hidden bg-clinical-100 mb-4">
+                    <div className="h-full flex">
+                      <div
+                        className="bg-dermis-500 transition-all"
+                        style={{ width: `${(PRACTICE_ANALYTICS.revenue.breakdown.medical / PRACTICE_ANALYTICS.revenue.mtd) * 100}%` }}
+                      />
+                      <div
+                        className="bg-pink-400 transition-all"
+                        style={{ width: `${(PRACTICE_ANALYTICS.revenue.breakdown.cosmetic / PRACTICE_ANALYTICS.revenue.mtd) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-dermis-500" />
+                        <span className="text-sm text-clinical-700">Medical</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-semibold text-clinical-800">${PRACTICE_ANALYTICS.revenue.breakdown.medical.toLocaleString()}</span>
+                        <span className="text-xs text-clinical-500 ml-2">
+                          ({((PRACTICE_ANALYTICS.revenue.breakdown.medical / PRACTICE_ANALYTICS.revenue.mtd) * 100).toFixed(0)}%)
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-pink-400" />
+                        <span className="text-sm text-clinical-700">Cosmetic</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-semibold text-clinical-800">${PRACTICE_ANALYTICS.revenue.breakdown.cosmetic.toLocaleString()}</span>
+                        <span className="text-xs text-clinical-500 ml-2">
+                          ({((PRACTICE_ANALYTICS.revenue.breakdown.cosmetic / PRACTICE_ANALYTICS.revenue.mtd) * 100).toFixed(0)}%)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* YTD Progress */}
+                  <div className="mt-4 pt-4 border-t border-clinical-100">
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="text-clinical-600">YTD Progress</span>
+                      <span className="font-medium text-clinical-800">
+                        ${(PRACTICE_ANALYTICS.revenue.ytd / 1000).toFixed(0)}K / ${(PRACTICE_ANALYTICS.revenue.target / 1000).toFixed(0)}K
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full bg-clinical-100 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-dermis-400 to-dermis-600 transition-all"
+                        style={{ width: `${(PRACTICE_ANALYTICS.revenue.ytd / PRACTICE_ANALYTICS.revenue.target) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-clinical-500 mt-1">
+                      {((PRACTICE_ANALYTICS.revenue.ytd / PRACTICE_ANALYTICS.revenue.target) * 100).toFixed(0)}% of annual target
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-sm font-medium text-clinical-600">Unsigned Notes</h3>
+
+                {/* Top Procedures */}
+                <div className="card p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-clinical-800 flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 text-dermis-600" />
+                      Top Procedures
+                    </h3>
+                    <span className="text-xs text-clinical-500">MTD</span>
+                  </div>
+                  <div className="space-y-3">
+                    {PRACTICE_ANALYTICS.procedures.topProcedures.slice(0, 5).map((proc, i) => (
+                      <div key={proc.name} className="flex items-center gap-3">
+                        <span className="text-xs font-medium text-clinical-400 w-4">{i + 1}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm text-clinical-700">{proc.name}</span>
+                            <span className="text-sm font-medium text-clinical-800">{proc.count}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-clinical-100 overflow-hidden">
+                            <div
+                              className="h-full bg-dermis-400 transition-all"
+                              style={{ width: `${(proc.count / Math.max(...PRACTICE_ANALYTICS.procedures.topProcedures.map(p => p.count))) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                        <span className="text-xs text-clinical-500 w-16 text-right">
+                          ${(proc.revenue / 1000).toFixed(1)}K
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Provider Performance */}
+                <div className="card p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-clinical-800 flex items-center gap-2">
+                      <Stethoscope className="w-4 h-4 text-dermis-600" />
+                      Provider Performance
+                    </h3>
+                    <span className="text-xs text-clinical-500">MTD</span>
+                  </div>
+                  <div className="space-y-4">
+                    {PRACTICE_ANALYTICS.providers.map((provider) => (
+                      <div key={provider.name} className="p-3 rounded-lg bg-clinical-50">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-clinical-800 text-sm">{provider.name}</span>
+                          <span className="text-sm font-semibold text-emerald-600">
+                            ${(provider.revenue / 1000).toFixed(1)}K
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="flex items-center gap-1 text-clinical-600">
+                            <Users className="w-3 h-3" />
+                            {provider.patients} patients
+                          </div>
+                          <div className="flex items-center gap-1 text-clinical-600">
+                            <Syringe className="w-3 h-3" />
+                            {provider.procedures} procedures
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              <div className="card p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                    <Activity className="w-6 h-6 text-green-600" />
+              {/* Quick Stats Row */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                <div className="card p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-blue-600" />
                   </div>
-                  <span className="text-3xl font-bold text-clinical-900">{data.stats.recentPatientsCount}</span>
+                  <div>
+                    <p className="text-xl font-bold text-clinical-900">{data.stats.todayAppointments}</p>
+                    <p className="text-xs text-clinical-500">Today's Appts</p>
+                  </div>
                 </div>
-                <h3 className="text-sm font-medium text-clinical-600">Recent Patients (7d)</h3>
+                <div className="card p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                    <Edit className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-clinical-900">{data.stats.unsignedCount}</p>
+                    <p className="text-xs text-clinical-500">Unsigned Notes</p>
+                  </div>
+                </div>
+                <div className="card p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                    <Target className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-clinical-900">{PRACTICE_ANALYTICS.patients.retention}%</p>
+                    <p className="text-xs text-clinical-500">Retention Rate</p>
+                  </div>
+                </div>
+                <div className="card p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-clinical-900">{PRACTICE_ANALYTICS.collections.avgDaysToCollect}d</p>
+                    <p className="text-xs text-clinical-500">Avg Collection</p>
+                  </div>
+                </div>
               </div>
             </div>
 
