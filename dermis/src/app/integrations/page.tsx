@@ -232,6 +232,7 @@ export default function IntegrationsPage() {
 
   // Patient search for quick actions
   const [showPatientSearch, setShowPatientSearch] = useState(false)
+  const [searchMode, setSearchMode] = useState<'prescription' | 'lab'>('prescription')
   const [patientSearchQuery, setPatientSearchQuery] = useState('')
   const [patientSearchResults, setPatientSearchResults] = useState<PatientSearchResult[]>([])
   const [isSearchingPatients, setIsSearchingPatients] = useState(false)
@@ -265,7 +266,16 @@ export default function IntegrationsPage() {
   const handlePatientSelect = (patientId: string) => {
     setShowPatientSearch(false)
     setPatientSearchQuery('')
-    router.push(`/patients/${patientId}/prescriptions`)
+    if (searchMode === 'prescription') {
+      router.push(`/patients/${patientId}/prescriptions`)
+    } else {
+      router.push(`/patients/${patientId}/labs`)
+    }
+  }
+
+  const openPatientSearch = (mode: 'prescription' | 'lab') => {
+    setSearchMode(mode)
+    setShowPatientSearch(true)
   }
 
   const categories = [
@@ -573,12 +583,22 @@ export default function IntegrationsPage() {
                   <ArrowRight className="w-4 h-4 text-clinical-400" />
                 </Link>
                 <button
-                  onClick={() => setShowPatientSearch(true)}
+                  onClick={() => openPatientSearch('prescription')}
                   className="w-full flex items-center justify-between p-3 bg-clinical-50 rounded-lg hover:bg-clinical-100 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <Pill className="w-5 h-5 text-purple-600" />
                     <span className="text-sm font-medium text-clinical-800">New Prescription</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-clinical-400" />
+                </button>
+                <button
+                  onClick={() => openPatientSearch('lab')}
+                  className="w-full flex items-center justify-between p-3 bg-clinical-50 rounded-lg hover:bg-clinical-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <FlaskConical className="w-5 h-5 text-blue-600" />
+                    <span className="text-sm font-medium text-clinical-800">Order Labs</span>
                   </div>
                   <ArrowRight className="w-4 h-4 text-clinical-400" />
                 </button>
@@ -626,18 +646,30 @@ export default function IntegrationsPage() {
         </div>
       </main>
 
-      {/* Patient Search Modal for Prescriptions */}
+      {/* Patient Search Modal for Quick Actions */}
       {showPatientSearch && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
             <div className="px-6 py-4 border-b border-clinical-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                  <Pill className="w-5 h-5 text-purple-600" />
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  searchMode === 'prescription' ? 'bg-purple-100' : 'bg-blue-100'
+                }`}>
+                  {searchMode === 'prescription' ? (
+                    <Pill className="w-5 h-5 text-purple-600" />
+                  ) : (
+                    <FlaskConical className="w-5 h-5 text-blue-600" />
+                  )}
                 </div>
                 <div>
-                  <h3 className="font-display font-semibold text-clinical-800">New Prescription</h3>
-                  <p className="text-sm text-clinical-600">Search for a patient to prescribe</p>
+                  <h3 className="font-display font-semibold text-clinical-800">
+                    {searchMode === 'prescription' ? 'New Prescription' : 'Order Labs'}
+                  </h3>
+                  <p className="text-sm text-clinical-600">
+                    {searchMode === 'prescription'
+                      ? 'Search for a patient to prescribe'
+                      : 'Search for a patient to order labs'}
+                  </p>
                 </div>
               </div>
               <button

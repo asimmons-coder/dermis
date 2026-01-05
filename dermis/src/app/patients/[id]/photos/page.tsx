@@ -20,7 +20,8 @@ import {
   Sparkles,
   User,
   Pill,
-  CreditCard
+  CreditCard,
+  FlaskConical
 } from 'lucide-react'
 
 interface PatientPhoto {
@@ -326,6 +327,13 @@ export default function PatientPhotosPage() {
             >
               <Pill className="w-4 h-4" />
               Prescriptions
+            </Link>
+            <Link
+              href={`/patients/${patientId}/labs`}
+              className="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-2 whitespace-nowrap"
+            >
+              <FlaskConical className="w-4 h-4" />
+              Labs
             </Link>
             <Link
               href={`/patients/${patientId}/products`}
