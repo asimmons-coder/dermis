@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { useVoiceInput } from '@/hooks/useVoiceInput'
 import CodeSelection from '@/components/CodeSelection'
+import ProcedureTemplates from '@/components/ProcedureTemplates'
 
 interface Patient {
   id: string
@@ -103,6 +104,9 @@ export default function EncounterDocumentationPage({ params }: { params: { id: s
   // Code selection state
   const [selectedIcd10Codes, setSelectedIcd10Codes] = useState<Array<{ code: string; description: string }>>([])
   const [selectedCptCodes, setSelectedCptCodes] = useState<Array<{ code: string; description: string; units?: number }>>([])
+
+  // Procedure documentation state
+  const [procedureNotes, setProcedureNotes] = useState<string[]>([])
 
   // Voice input hook
   const quickInputVoice = useVoiceInput((text) => {
@@ -281,6 +285,26 @@ export default function EncounterDocumentationPage({ params }: { params: { id: s
     })
   }
 
+  // Procedure documentation handlers
+  const handleProcedureAdd = (procedure: any) => {
+    console.log('Procedure added:', procedure)
+  }
+
+  const handleProcedureCptAdd = (code: { code: string; description: string }) => {
+    // Add CPT code if not already selected
+    if (!selectedCptCodes.find(c => c.code === code.code)) {
+      setSelectedCptCodes(prev => [...prev, code])
+    }
+  }
+
+  const handleProcedureNoteAppend = (text: string) => {
+    // Append procedure note to the list
+    setProcedureNotes(prev => [...prev, text])
+
+    // Also append to quick input so it's included in AI generation
+    setQuickInput(prev => prev ? `${prev}\n\n${text}` : text)
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-clinical-50 via-white to-dermis-50/30 flex items-center justify-center">
@@ -384,6 +408,13 @@ export default function EncounterDocumentationPage({ params }: { params: { id: s
                 {encounter.chiefComplaint}
               </p>
             </div>
+
+            {/* Procedure Documentation */}
+            <ProcedureTemplates
+              onProcedureAdd={handleProcedureAdd}
+              onCptCodeAdd={handleProcedureCptAdd}
+              onNoteAppend={handleProcedureNoteAppend}
+            />
 
             {/* Quick Notes Input */}
             <div className="card p-6 space-y-5">
