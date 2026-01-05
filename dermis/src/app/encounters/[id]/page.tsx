@@ -334,38 +334,38 @@ export default function EncounterDocumentationPage({ params }: { params: { id: s
     <div className="min-h-screen bg-gradient-to-br from-clinical-50 via-white to-dermis-50/30">
       {/* Header */}
       <header className="border-b border-clinical-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link href="/schedule" className="text-clinical-400 hover:text-clinical-600 transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-dermis-500 to-dermis-600 flex items-center justify-center">
-                <Stethoscope className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-dermis-500 to-dermis-600 flex items-center justify-center">
+                <Stethoscope className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-display font-bold text-clinical-800">Encounter Documentation</h1>
+                <h1 className="text-base sm:text-xl font-display font-bold text-clinical-800">Encounter</h1>
                 <p className="text-xs text-clinical-500">In Progress</p>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-sm text-clinical-500">
+          <div className="hidden sm:flex items-center gap-2 text-sm text-clinical-500">
             <Brain className="w-4 h-4" />
             AI-Powered
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* Patient Header */}
-        <div className="card p-6 mb-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-full bg-dermis-100 flex items-center justify-center flex-shrink-0">
-                <User className="w-6 h-6 text-dermis-600" />
+        <div className="card p-4 sm:p-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-dermis-100 flex items-center justify-center flex-shrink-0">
+                <User className="w-5 h-5 sm:w-6 sm:h-6 text-dermis-600" />
               </div>
               <div>
-                <h2 className="text-2xl font-display font-bold text-clinical-900">{encounter.patient.name}</h2>
+                <h2 className="text-xl sm:text-2xl font-display font-bold text-clinical-900">{encounter.patient.name}</h2>
                 <div className="flex items-center gap-4 mt-2 text-sm text-clinical-600">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-4 h-4" />
@@ -391,14 +391,14 @@ export default function EncounterDocumentationPage({ params }: { params: { id: s
             </div>
             <Link
               href={`/patients/${encounter.patient.id}`}
-              className="btn-secondary text-sm"
+              className="btn-secondary text-sm w-full sm:w-auto"
             >
               View Full Chart
             </Link>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-4 sm:gap-8">
           {/* Input Panel */}
           <div className="space-y-6">
             {/* Chief Complaint */}

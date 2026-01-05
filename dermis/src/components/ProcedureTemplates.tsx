@@ -312,13 +312,13 @@ export default function ProcedureTemplates({
         return (
           <div key={field}>
             <label className="label">Laterality</label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {LATERALITY.map(lat => (
                 <button
                   key={lat}
                   type="button"
                   onClick={() => handleFieldChange('laterality', lat)}
-                  className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                  className={`px-2 sm:px-3 py-1.5 rounded text-xs sm:text-sm font-medium transition-colors ${
                     formData.laterality === lat
                       ? 'bg-dermis-500 text-white'
                       : 'bg-clinical-100 text-clinical-600 hover:bg-clinical-200'
@@ -350,13 +350,13 @@ export default function ProcedureTemplates({
         return (
           <div key={field}>
             <label className="label">Punch Size</label>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {PUNCH_SIZES.map(size => (
                 <button
                   key={size}
                   type="button"
                   onClick={() => handleFieldChange('punch_size', size)}
-                  className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                  className={`px-2 sm:px-3 py-1.5 rounded text-xs sm:text-sm font-medium transition-colors ${
                     formData.punch_size === size
                       ? 'bg-purple-500 text-white'
                       : 'bg-clinical-100 text-clinical-600 hover:bg-clinical-200'
@@ -564,10 +564,10 @@ export default function ProcedureTemplates({
       </button>
 
       {isExpanded && (
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Procedure Buttons */}
           {!selectedProcedure && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
               {Object.entries(PROCEDURE_TEMPLATES).map(([key, template]) => {
                 const Icon = template.icon
                 return (
@@ -609,7 +609,7 @@ export default function ProcedureTemplates({
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {PROCEDURE_TEMPLATES[selectedProcedure].fields.map(field => renderField(field))}
               </div>
 
@@ -625,12 +625,12 @@ export default function ProcedureTemplates({
               </div>
 
               {/* CPT Code */}
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="text-clinical-500">CPT Code:</span>
                 <span className="px-2 py-1 bg-dermis-100 text-dermis-700 rounded font-mono font-medium">
                   {selectCptCode(selectedProcedure, formData).code}
                 </span>
-                <span className="text-clinical-600 text-xs">
+                <span className="text-clinical-600 text-xs hidden sm:inline">
                   {selectCptCode(selectedProcedure, formData).description}
                 </span>
               </div>

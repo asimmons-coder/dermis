@@ -530,81 +530,83 @@ export default function PatientChartPage() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2">
               <button
                 onClick={handleVerifyInsurance}
                 className="btn-secondary text-sm"
               >
                 <Shield className="w-4 h-4 mr-1.5" />
-                Verify Eligibility
+                <span className="hidden md:inline">Verify</span>
               </button>
               <Link
                 href={`/patients/${patient.id}/edit`}
                 className="btn-secondary text-sm"
               >
-                <Edit className="w-4 h-4 mr-1.5" />
-                Edit
+                <Edit className="w-4 h-4" />
               </Link>
               <Link
                 href={`/demo?patientId=${patient.id}`}
                 className="btn-primary text-sm"
               >
-                <Plus className="w-4 h-4 mr-1.5" />
-                New Encounter
+                <Plus className="w-4 h-4 mr-1" />
+                <span className="hidden md:inline">New</span>
               </Link>
             </div>
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex items-center gap-1 border-b border-clinical-200 -mb-px">
+          <div className="flex items-center gap-1 border-b border-clinical-200 -mb-px overflow-x-auto scrollbar-thin">
             <Link
               href={`/patients/${patient.id}`}
-              className="px-4 py-2 text-sm font-medium border-b-2 border-dermis-500 text-dermis-600 flex items-center gap-2"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium border-b-2 border-dermis-500 text-dermis-600 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap"
             >
               <FileText className="w-4 h-4" />
               Chart
             </Link>
             <Link
               href={`/patients/${patient.id}/photos`}
-              className="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-2"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-1.5 sm:gap-2 whitespace-nowrap"
             >
               <Camera className="w-4 h-4" />
               Photos
             </Link>
             <Link
               href={`/patients/${patient.id}/cosmetic`}
-              className="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-2"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-1.5 sm:gap-2 whitespace-nowrap"
             >
               <Sparkles className="w-4 h-4" />
               Cosmetic
             </Link>
             <Link
               href={`/patients/${patient.id}/prescriptions`}
-              className="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-2"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-1.5 sm:gap-2 whitespace-nowrap"
             >
               <Pill className="w-4 h-4" />
-              Prescriptions
+              <span className="hidden sm:inline">Prescriptions</span>
+              <span className="sm:hidden">Rx</span>
             </Link>
             <Link
               href={`/patients/${patient.id}/labs`}
-              className="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-2"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-1.5 sm:gap-2 whitespace-nowrap"
             >
               <FlaskConical className="w-4 h-4" />
               Labs
             </Link>
             <Link
               href={`/patients/${patient.id}/products`}
-              className="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-2"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-1.5 sm:gap-2 whitespace-nowrap"
             >
               <CreditCard className="w-4 h-4" />
-              Products
+              <span className="hidden sm:inline">Products</span>
+              <span className="sm:hidden">Prod</span>
             </Link>
             <Link
               href={`/patients/${patient.id}/messages`}
-              className="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-2 relative"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-1.5 sm:gap-2 whitespace-nowrap relative"
             >
               <MessageSquare className="w-4 h-4" />
-              Messages
+              <span className="hidden sm:inline">Messages</span>
+              <span className="sm:hidden">Msg</span>
               {overdueFollowUps > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
                   {overdueFollowUps}
@@ -613,7 +615,7 @@ export default function PatientChartPage() {
             </Link>
             <Link
               href={`/patients/${patient.id}/billing`}
-              className="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-2"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium border-b-2 border-transparent text-clinical-600 hover:text-clinical-800 hover:border-clinical-300 transition-colors flex items-center gap-1.5 sm:gap-2 whitespace-nowrap"
             >
               <DollarSign className="w-4 h-4" />
               Billing

@@ -350,7 +350,7 @@ export default function SchedulePage() {
     const encountersByProvider = getEncountersByProvider()
 
     return (
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {providers.map(provider => (
           <div key={provider.id} className="flex flex-col">
             {/* Provider Header */}
@@ -417,7 +417,8 @@ export default function SchedulePage() {
     const encountersByStatus = getEncountersByStatus()
 
     return (
-      <div className="grid grid-cols-5 gap-4">
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="grid grid-cols-5 gap-3 sm:gap-4 min-w-[900px] sm:min-w-0">
         {STATUS_COLUMNS.map(column => {
           const Icon = column.icon
           const columnEncounters = encountersByStatus[column.key] || []
@@ -457,6 +458,7 @@ export default function SchedulePage() {
             </div>
           )
         })}
+        </div>
       </div>
     )
   }
@@ -515,27 +517,28 @@ export default function SchedulePage() {
     const weekDays = getWeekDays(currentDate)
 
     return (
-      <div>
-        {/* Week Header */}
-        <div className="grid grid-cols-7 gap-2 mb-4">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => (
-            <div key={day} className="text-center font-semibold text-sm text-clinical-700 py-2">
-              {day}
-            </div>
-          ))}
-        </div>
-
-        {/* Provider Rows */}
-        <div className="space-y-4">
-          {providers.map(provider => (
-            <div key={provider.id} className="card">
-              {/* Provider Header */}
-              <div className={`p-3 border-b-2 ${getProviderColor(provider.firstName)}`}>
-                <h3 className="font-semibold text-sm">{provider.fullName}</h3>
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="min-w-[700px] sm:min-w-0">
+          {/* Week Header */}
+          <div className="grid grid-cols-7 gap-2 mb-4">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => (
+              <div key={day} className="text-center font-semibold text-sm text-clinical-700 py-2">
+                {day}
               </div>
+            ))}
+          </div>
 
-              {/* Week Days Grid */}
-              <div className="grid grid-cols-7 gap-px bg-clinical-200">
+          {/* Provider Rows */}
+          <div className="space-y-4">
+            {providers.map(provider => (
+              <div key={provider.id} className="card">
+                {/* Provider Header */}
+                <div className={`p-3 border-b-2 ${getProviderColor(provider.firstName)}`}>
+                  <h3 className="font-semibold text-sm">{provider.fullName}</h3>
+                </div>
+
+                {/* Week Days Grid */}
+                <div className="grid grid-cols-7 gap-px bg-clinical-200">
                 {weekDays.map((day, idx) => {
                   const dayEncounters = getEncountersForDate(day).filter(
                     e => e.provider?.id === provider.id
@@ -588,6 +591,7 @@ export default function SchedulePage() {
               </div>
             </div>
           ))}
+          </div>
         </div>
       </div>
     )
@@ -599,15 +603,17 @@ export default function SchedulePage() {
     const currentMonth = currentDate.getMonth()
 
     return (
-      <div className="card">
-        {/* Day Headers */}
-        <div className="grid grid-cols-7 gap-px bg-clinical-200 border-b-2 border-clinical-300">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-            <div key={day} className="bg-clinical-100 text-center font-semibold text-sm text-clinical-700 py-3">
-              {day}
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="min-w-[600px] sm:min-w-0">
+          <div className="card">
+            {/* Day Headers */}
+            <div className="grid grid-cols-7 gap-px bg-clinical-200 border-b-2 border-clinical-300">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                <div key={day} className="bg-clinical-100 text-center font-semibold text-xs sm:text-sm text-clinical-700 py-2 sm:py-3">
+                  {day}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
         {/* Calendar Grid */}
         <div className="grid grid-cols-7 gap-px bg-clinical-200">
@@ -664,6 +670,8 @@ export default function SchedulePage() {
               </div>
             )
           })}
+          </div>
+          </div>
         </div>
       </div>
     )
@@ -673,22 +681,22 @@ export default function SchedulePage() {
     <div className="min-h-screen bg-gradient-to-br from-clinical-50 via-white to-dermis-50/30">
       <AppHeader />
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {/* Page Header with View Tabs */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
             <div>
-              <h1 className="text-3xl font-display font-bold text-clinical-900">Schedule</h1>
-              <p className="text-clinical-600 mt-1">{formatDate(currentDate)}</p>
+              <h1 className="text-2xl sm:text-3xl font-display font-bold text-clinical-900">Schedule</h1>
+              <p className="text-clinical-600 mt-1 text-sm sm:text-base">{formatDate(currentDate)}</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <button
                 onClick={goToToday}
                 className="btn-secondary text-sm"
               >
                 Today
               </button>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <button
                   onClick={previousDay}
                   className="p-2 hover:bg-clinical-100 rounded-lg transition-colors"
@@ -719,14 +727,14 @@ export default function SchedulePage() {
                 className="btn-primary text-sm"
               >
                 <Plus className="w-4 h-4" />
-                New Appointment
+                <span className="hidden sm:inline ml-1">New Appointment</span>
               </button>
             </div>
           </div>
 
           {/* View Mode Tabs */}
-          <div className="flex items-center justify-between border-b border-clinical-200">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between border-b border-clinical-200 overflow-x-auto scrollbar-thin">
+            <div className="flex items-center gap-2 min-w-max">
               {/* Calendar View Selector (when in calendar mode) */}
               {(viewMode === 'today' || viewMode === 'week' || viewMode === 'month') && (
                 <div className="flex items-center gap-1 mr-4 bg-clinical-100 rounded-lg p-1">
