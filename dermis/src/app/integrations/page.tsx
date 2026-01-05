@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   CheckCircle,
   AlertCircle,
@@ -21,7 +22,11 @@ import {
   ChevronRight,
   Send,
   Download,
-  Upload
+  Upload,
+  Search,
+  X,
+  Loader2,
+  User
 } from 'lucide-react'
 import AppHeader from '@/components/AppHeader'
 
@@ -212,9 +217,98 @@ const RECENT_ACTIVITY: RecentActivity[] = [
   }
 ]
 
+interface PatientSearchResult {
+  id: string
+  firstName: string
+  lastName: string
+  mrn: string
+  dateOfBirth: string
+}
+
 export default function IntegrationsPage() {
+  const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // Patient search for quick actions
+  const [showPatientSearch, setShowPatientSearch] = useState(false)
+  const [searchMode, setSearchMode] = useState<'prescription' | 'lab' | 'eligibility'>('prescription')
+  const [patientSearchQuery, setPatientSearchQuery] = useState('')
+  const [patientSearchResults, setPatientSearchResults] = useState<PatientSearchResult[]>([])
+  const [isSearchingPatients, setIsSearchingPatients] = useState(false)
+
+  // Eligibility check state
+  const [showEligibilityResults, setShowEligibilityResults] = useState(false)
+  const [eligibilityData, setEligibilityData] = useState<any>(null)
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState(false)
+  const [selectedPatientForEligibility, setSelectedPatientForEligibility] = useState<PatientSearchResult | null>(null)
+
+  useEffect(() => {
+    if (patientSearchQuery.length >= 2) {
+      const timer = setTimeout(() => {
+        searchPatients()
+      }, 300)
+      return () => clearTimeout(timer)
+    } else {
+      setPatientSearchResults([])
+    }
+  }, [patientSearchQuery])
+
+  const searchPatients = async () => {
+    setIsSearchingPatients(true)
+    try {
+      const response = await fetch(`/api/patients?search=${encodeURIComponent(patientSearchQuery)}`)
+      if (response.ok) {
+        const data = await response.json()
+        setPatientSearchResults(data.patients || [])
+      }
+    } catch (err) {
+      console.error('Failed to search patients:', err)
+    } finally {
+      setIsSearchingPatients(false)
+    }
+  }
+
+  const handlePatientSelect = async (patient: PatientSearchResult) => {
+    if (searchMode === 'eligibility') {
+      // Check eligibility for this patient
+      setSelectedPatientForEligibility(patient)
+      setShowPatientSearch(false)
+      setPatientSearchQuery('')
+      setIsCheckingEligibility(true)
+      setShowEligibilityResults(true)
+
+      try {
+        const response = await fetch('/api/eligibility', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ patientId: patient.id })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setEligibilityData(data.eligibility)
+        }
+      } catch (err) {
+        console.error('Failed to check eligibility:', err)
+      } finally {
+        setIsCheckingEligibility(false)
+      }
+    } else {
+      setShowPatientSearch(false)
+      setPatientSearchQuery('')
+      if (searchMode === 'prescription') {
+        router.push(`/patients/${patient.id}/prescriptions`)
+      } else {
+        router.push(`/patients/${patient.id}/labs`)
+      }
+    }
+  }
+
+  const openPatientSearch = (mode: 'prescription' | 'lab' | 'eligibility') => {
+    setSearchMode(mode)
+    setShowPatientSearch(true)
+  }
 
   const categories = [
     { key: 'all', label: 'All Integrations', icon: Zap },
@@ -520,14 +614,30 @@ export default function IntegrationsPage() {
                   </div>
                   <ArrowRight className="w-4 h-4 text-clinical-400" />
                 </Link>
-                <button className="w-full flex items-center justify-between p-3 bg-clinical-50 rounded-lg hover:bg-clinical-100 transition-colors">
+                <button
+                  onClick={() => openPatientSearch('prescription')}
+                  className="w-full flex items-center justify-between p-3 bg-clinical-50 rounded-lg hover:bg-clinical-100 transition-colors"
+                >
                   <div className="flex items-center gap-3">
                     <Pill className="w-5 h-5 text-purple-600" />
                     <span className="text-sm font-medium text-clinical-800">New Prescription</span>
                   </div>
                   <ArrowRight className="w-4 h-4 text-clinical-400" />
                 </button>
-                <button className="w-full flex items-center justify-between p-3 bg-clinical-50 rounded-lg hover:bg-clinical-100 transition-colors">
+                <button
+                  onClick={() => openPatientSearch('lab')}
+                  className="w-full flex items-center justify-between p-3 bg-clinical-50 rounded-lg hover:bg-clinical-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <FlaskConical className="w-5 h-5 text-blue-600" />
+                    <span className="text-sm font-medium text-clinical-800">Order Labs</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-clinical-400" />
+                </button>
+                <button
+                  onClick={() => openPatientSearch('eligibility')}
+                  className="w-full flex items-center justify-between p-3 bg-clinical-50 rounded-lg hover:bg-clinical-100 transition-colors"
+                >
                   <div className="flex items-center gap-3">
                     <CreditCard className="w-5 h-5 text-orange-600" />
                     <span className="text-sm font-medium text-clinical-800">Check Eligibility</span>
@@ -570,6 +680,408 @@ export default function IntegrationsPage() {
           </div>
         </div>
       </main>
+
+      {/* Eligibility Results Modal */}
+      {showEligibilityResults && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+            <div className="px-6 py-4 border-b border-clinical-100 flex items-center justify-between bg-gradient-to-r from-orange-50 to-amber-50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                  <CreditCard className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="font-display font-semibold text-clinical-800">
+                    Insurance Eligibility Check
+                  </h3>
+                  {selectedPatientForEligibility && (
+                    <p className="text-sm text-clinical-600">
+                      {selectedPatientForEligibility.firstName} {selectedPatientForEligibility.lastName} • MRN: {selectedPatientForEligibility.mrn}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowEligibilityResults(false)
+                  setEligibilityData(null)
+                  setSelectedPatientForEligibility(null)
+                }}
+                className="text-clinical-400 hover:text-clinical-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+              {isCheckingEligibility ? (
+                <div className="text-center py-12">
+                  <Loader2 className="w-12 h-12 mx-auto mb-4 text-orange-500 animate-spin" />
+                  <p className="text-lg font-medium text-clinical-800">Verifying Insurance Coverage...</p>
+                  <p className="text-sm text-clinical-500 mt-1">Connecting to Availity clearinghouse</p>
+                </div>
+              ) : eligibilityData ? (
+                <div className="space-y-6">
+                  {/* Status Banner */}
+                  <div className={`p-4 rounded-lg flex items-center gap-4 ${
+                    eligibilityData.status === 'active'
+                      ? 'bg-green-50 border border-green-200'
+                      : 'bg-red-50 border border-red-200'
+                  }`}>
+                    {eligibilityData.status === 'active' ? (
+                      <CheckCircle className="w-8 h-8 text-green-600" />
+                    ) : (
+                      <AlertCircle className="w-8 h-8 text-red-600" />
+                    )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <span className={`text-lg font-semibold ${
+                          eligibilityData.status === 'active' ? 'text-green-800' : 'text-red-800'
+                        }`}>
+                          {eligibilityData.status === 'active' ? 'Coverage Active' : 'Coverage Inactive'}
+                        </span>
+                        {eligibilityData.coverage_level && (
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            eligibilityData.coverage_level === 'excellent' ? 'bg-green-200 text-green-800' :
+                            eligibilityData.coverage_level === 'good' ? 'bg-blue-200 text-blue-800' :
+                            eligibilityData.coverage_level === 'basic' ? 'bg-yellow-200 text-yellow-800' :
+                            'bg-clinical-200 text-clinical-800'
+                          }`}>
+                            {eligibilityData.coverage_level.charAt(0).toUpperCase() + eligibilityData.coverage_level.slice(1)} Coverage
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-clinical-600 mt-1">
+                        {eligibilityData.plan_name} • Verified at {new Date(eligibilityData.verified_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="text-right text-xs text-clinical-500">
+                      <p>Transaction: {eligibilityData.transaction_id}</p>
+                      <p>Via: {eligibilityData.clearinghouse}</p>
+                    </div>
+                  </div>
+
+                  {eligibilityData.status === 'active' && eligibilityData.benefits && (
+                    <>
+                      {/* Plan Info */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="card p-4">
+                          <p className="text-xs text-clinical-500 uppercase tracking-wide mb-1">Member ID</p>
+                          <p className="font-semibold text-clinical-800">{eligibilityData.member_id}</p>
+                        </div>
+                        <div className="card p-4">
+                          <p className="text-xs text-clinical-500 uppercase tracking-wide mb-1">Group Number</p>
+                          <p className="font-semibold text-clinical-800">{eligibilityData.group_number || 'N/A'}</p>
+                        </div>
+                        <div className="card p-4">
+                          <p className="text-xs text-clinical-500 uppercase tracking-wide mb-1">Effective Date</p>
+                          <p className="font-semibold text-clinical-800">{eligibilityData.effective_date}</p>
+                        </div>
+                        <div className="card p-4">
+                          <p className="text-xs text-clinical-500 uppercase tracking-wide mb-1">Subscriber</p>
+                          <p className="font-semibold text-clinical-800">{eligibilityData.subscriber?.relationship || 'Self'}</p>
+                        </div>
+                      </div>
+
+                      {/* Benefits Summary */}
+                      <div>
+                        <h4 className="font-semibold text-clinical-800 mb-3">Benefits Summary</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="card p-4 bg-blue-50 border-blue-200">
+                            <p className="text-xs text-blue-600 uppercase tracking-wide mb-1">Office Visit Copay</p>
+                            <p className="text-2xl font-bold text-blue-800">
+                              {eligibilityData.benefits.copay_office_visit
+                                ? `$${eligibilityData.benefits.copay_office_visit}`
+                                : 'Ded.'}
+                            </p>
+                          </div>
+                          <div className="card p-4 bg-purple-50 border-purple-200">
+                            <p className="text-xs text-purple-600 uppercase tracking-wide mb-1">Specialist Copay</p>
+                            <p className="text-2xl font-bold text-purple-800">
+                              {eligibilityData.benefits.copay_specialist
+                                ? `$${eligibilityData.benefits.copay_specialist}`
+                                : 'Ded.'}
+                            </p>
+                          </div>
+                          <div className="card p-4 bg-orange-50 border-orange-200">
+                            <p className="text-xs text-orange-600 uppercase tracking-wide mb-1">Coinsurance</p>
+                            <p className="text-2xl font-bold text-orange-800">{eligibilityData.benefits.coinsurance}%</p>
+                          </div>
+                          <div className="card p-4 bg-green-50 border-green-200">
+                            <p className="text-xs text-green-600 uppercase tracking-wide mb-1">Deductible Met</p>
+                            <p className="text-2xl font-bold text-green-800">
+                              ${eligibilityData.benefits.deductible_met} / ${eligibilityData.benefits.deductible_individual}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Deductible & OOP Progress */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="card p-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium text-clinical-700">Individual Deductible</span>
+                            <span className="text-sm text-clinical-600">
+                              ${eligibilityData.benefits.deductible_met} of ${eligibilityData.benefits.deductible_individual}
+                            </span>
+                          </div>
+                          <div className="w-full bg-clinical-200 rounded-full h-3">
+                            <div
+                              className="bg-dermis-500 h-3 rounded-full transition-all"
+                              style={{
+                                width: `${Math.min(100, (eligibilityData.benefits.deductible_met / eligibilityData.benefits.deductible_individual) * 100)}%`
+                              }}
+                            />
+                          </div>
+                          <p className="text-xs text-clinical-500 mt-1">
+                            ${eligibilityData.benefits.deductible_individual - eligibilityData.benefits.deductible_met} remaining
+                          </p>
+                        </div>
+                        <div className="card p-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium text-clinical-700">Out-of-Pocket Max</span>
+                            <span className="text-sm text-clinical-600">
+                              ${eligibilityData.benefits.out_of_pocket_met} of ${eligibilityData.benefits.out_of_pocket_max}
+                            </span>
+                          </div>
+                          <div className="w-full bg-clinical-200 rounded-full h-3">
+                            <div
+                              className="bg-green-500 h-3 rounded-full transition-all"
+                              style={{
+                                width: `${Math.min(100, (eligibilityData.benefits.out_of_pocket_met / eligibilityData.benefits.out_of_pocket_max) * 100)}%`
+                              }}
+                            />
+                          </div>
+                          <p className="text-xs text-clinical-500 mt-1">
+                            ${eligibilityData.benefits.out_of_pocket_max - eligibilityData.benefits.out_of_pocket_met} remaining
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* HSA Info if applicable */}
+                      {eligibilityData.hsa_eligible && (
+                        <div className="card p-4 bg-emerald-50 border-emerald-200">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                              <CreditCard className="w-5 h-5 text-emerald-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-emerald-800">HSA Eligible Plan</p>
+                              <p className="text-sm text-emerald-600">Current HSA Balance: ${eligibilityData.hsa_balance}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Dermatology-Specific Coverage */}
+                      {eligibilityData.dermatology_specific && (
+                        <div>
+                          <h4 className="font-semibold text-clinical-800 mb-3 flex items-center gap-2">
+                            <FlaskConical className="w-4 h-4 text-dermis-500" />
+                            Dermatology-Specific Coverage
+                          </h4>
+                          <div className="card divide-y divide-clinical-100">
+                            {Object.entries(eligibilityData.dermatology_specific).map(([key, value]) => (
+                              <div key={key} className="flex justify-between items-center p-3">
+                                <span className="font-medium text-clinical-700 capitalize">
+                                  {key.replace(/_/g, ' ')}
+                                </span>
+                                <span className={`text-sm ${
+                                  String(value).toLowerCase().includes('not covered')
+                                    ? 'text-red-600'
+                                    : String(value).toLowerCase().includes('prior auth')
+                                      ? 'text-amber-600'
+                                      : 'text-green-600'
+                                }`}>
+                                  {String(value)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Prior Auth Requirements */}
+                      {eligibilityData.benefits.prior_auth_required && eligibilityData.benefits.prior_auth_required.length > 0 && (
+                        <div className="card p-4 bg-amber-50 border-amber-200">
+                          <div className="flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                            <div>
+                              <p className="font-medium text-amber-800">Prior Authorization Required</p>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {eligibilityData.benefits.prior_auth_required.map((item: string, idx: number) => (
+                                  <span key={idx} className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded">
+                                    {item}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {eligibilityData.status === 'inactive' && (
+                    <div className="card p-4 bg-red-50 border-red-200">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-red-800">Coverage Terminated</p>
+                          {eligibilityData.term_date && (
+                            <p className="text-sm text-red-600 mt-1">
+                              Termination Date: {eligibilityData.term_date}
+                            </p>
+                          )}
+                          {eligibilityData.reason && (
+                            <p className="text-sm text-red-600 mt-1">
+                              Reason: {eligibilityData.reason}
+                            </p>
+                          )}
+                          {eligibilityData.recommendation && (
+                            <p className="text-sm text-clinical-600 mt-2 p-2 bg-white rounded">
+                              <strong>Recommended Action:</strong> {eligibilityData.recommendation}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex justify-end gap-3 pt-4 border-t border-clinical-100">
+                    <button
+                      onClick={() => {
+                        setShowEligibilityResults(false)
+                        setEligibilityData(null)
+                        setSelectedPatientForEligibility(null)
+                      }}
+                      className="btn-secondary"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Re-check eligibility
+                        if (selectedPatientForEligibility) {
+                          handlePatientSelect(selectedPatientForEligibility)
+                        }
+                      }}
+                      className="btn-primary"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Re-verify
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-clinical-500">
+                  <AlertCircle className="w-12 h-12 mx-auto mb-4 text-clinical-300" />
+                  <p>Unable to retrieve eligibility information</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Patient Search Modal for Quick Actions */}
+      {showPatientSearch && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+            <div className="px-6 py-4 border-b border-clinical-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  searchMode === 'prescription' ? 'bg-purple-100' : searchMode === 'lab' ? 'bg-blue-100' : 'bg-orange-100'
+                }`}>
+                  {searchMode === 'prescription' ? (
+                    <Pill className="w-5 h-5 text-purple-600" />
+                  ) : searchMode === 'lab' ? (
+                    <FlaskConical className="w-5 h-5 text-blue-600" />
+                  ) : (
+                    <CreditCard className="w-5 h-5 text-orange-600" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="font-display font-semibold text-clinical-800">
+                    {searchMode === 'prescription' ? 'New Prescription' : searchMode === 'lab' ? 'Order Labs' : 'Check Eligibility'}
+                  </h3>
+                  <p className="text-sm text-clinical-600">
+                    {searchMode === 'prescription'
+                      ? 'Search for a patient to prescribe'
+                      : searchMode === 'lab'
+                        ? 'Search for a patient to order labs'
+                        : 'Search for a patient to verify coverage'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowPatientSearch(false)
+                  setPatientSearchQuery('')
+                }}
+                className="text-clinical-400 hover:text-clinical-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-clinical-400" />
+                <input
+                  type="text"
+                  value={patientSearchQuery}
+                  onChange={(e) => setPatientSearchQuery(e.target.value)}
+                  placeholder="Search by name or MRN..."
+                  className="input pl-10 w-full"
+                  autoFocus
+                />
+                {isSearchingPatients && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-clinical-400 animate-spin" />
+                )}
+              </div>
+
+              <div className="mt-4 max-h-80 overflow-y-auto">
+                {patientSearchResults.length === 0 && patientSearchQuery.length >= 2 && !isSearchingPatients && (
+                  <div className="text-center py-8 text-clinical-500">
+                    <User className="w-8 h-8 mx-auto mb-2 text-clinical-300" />
+                    <p>No patients found</p>
+                  </div>
+                )}
+                {patientSearchResults.length === 0 && patientSearchQuery.length < 2 && (
+                  <div className="text-center py-8 text-clinical-500">
+                    <Search className="w-8 h-8 mx-auto mb-2 text-clinical-300" />
+                    <p>Type at least 2 characters to search</p>
+                  </div>
+                )}
+                {patientSearchResults.map((patient) => (
+                  <button
+                    key={patient.id}
+                    onClick={() => handlePatientSelect(patient)}
+                    className="w-full p-4 text-left hover:bg-clinical-50 rounded-lg border border-clinical-100 mb-2 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-dermis-100 flex items-center justify-center">
+                        <User className="w-5 h-5 text-dermis-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-clinical-800">
+                          {patient.firstName} {patient.lastName}
+                        </div>
+                        <div className="text-sm text-clinical-500">
+                          MRN: {patient.mrn} • DOB: {new Date(patient.dateOfBirth).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-clinical-400" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
