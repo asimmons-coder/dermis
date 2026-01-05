@@ -15,6 +15,7 @@ import {
   FileText,
   AlertCircle
 } from 'lucide-react'
+import BodyDiagram, { LesionMarker } from './BodyDiagram'
 
 // Procedure definitions with CPT codes
 const PROCEDURE_TEMPLATES = {
@@ -173,11 +174,73 @@ export default function ProcedureTemplates({
   const [selectedProcedure, setSelectedProcedure] = useState<keyof typeof PROCEDURE_TEMPLATES | null>(null)
   const [formData, setFormData] = useState<Record<string, string | number>>({})
   const [completedProcedures, setCompletedProcedures] = useState<Procedure[]>([])
+  const [bodyMarkers, setBodyMarkers] = useState<LesionMarker[]>([])
+  const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null)
 
   const handleProcedureSelect = (procedureType: keyof typeof PROCEDURE_TEMPLATES) => {
     const template = PROCEDURE_TEMPLATES[procedureType]
     setSelectedProcedure(procedureType)
     setFormData(template.defaultValues || {})
+    setBodyMarkers([])
+    setSelectedMarkerId(null)
+  }
+
+  const handleBodySiteSelect = (site: string) => {
+    // Map body diagram site to form site field
+    const siteMapping: Record<string, string> = {
+      'Scalp': 'Scalp',
+      'Forehead': 'Forehead',
+      'Face': 'Cheek',
+      'Neck': 'Neck',
+      'Right Shoulder': 'Shoulder',
+      'Left Shoulder': 'Shoulder',
+      'Right Upper Arm': 'Upper arm',
+      'Left Upper Arm': 'Upper arm',
+      'Chest': 'Chest',
+      'Right Forearm': 'Forearm',
+      'Left Forearm': 'Forearm',
+      'Abdomen': 'Abdomen',
+      'Right Hand': 'Hand',
+      'Left Hand': 'Hand',
+      'Right Thigh': 'Thigh',
+      'Left Thigh': 'Thigh',
+      'Right Knee': 'Knee',
+      'Left Knee': 'Knee',
+      'Right Lower Leg': 'Lower leg',
+      'Left Lower Leg': 'Lower leg',
+      'Right Foot': 'Foot',
+      'Left Foot': 'Foot',
+      'Upper Back': 'Back',
+      'Lower Back': 'Back',
+      'Posterior Scalp': 'Scalp',
+      'Posterior Neck': 'Neck',
+      'Right Posterior Shoulder': 'Shoulder',
+      'Left Posterior Shoulder': 'Shoulder',
+      'Right Posterior Upper Arm': 'Upper arm',
+      'Left Posterior Upper Arm': 'Upper arm',
+      'Right Posterior Forearm': 'Forearm',
+      'Left Posterior Forearm': 'Forearm',
+      'Right Posterior Hand': 'Hand',
+      'Left Posterior Hand': 'Hand',
+      'Buttocks': 'Hip',
+      'Right Posterior Thigh': 'Thigh',
+      'Left Posterior Thigh': 'Thigh',
+      'Right Posterior Knee': 'Knee',
+      'Left Posterior Knee': 'Knee',
+      'Right Calf': 'Lower leg',
+      'Left Calf': 'Lower leg',
+      'Right Heel': 'Foot',
+      'Left Heel': 'Foot',
+    }
+
+    const mappedSite = siteMapping[site] || site
+    const laterality = site.includes('Right') ? 'Right' : site.includes('Left') ? 'Left' : 'Midline'
+
+    setFormData(prev => ({
+      ...prev,
+      site: mappedSite,
+      laterality: laterality
+    }))
   }
 
   const handleFieldChange = (field: string, value: string | number) => {
@@ -602,6 +665,8 @@ export default function ProcedureTemplates({
                   onClick={() => {
                     setSelectedProcedure(null)
                     setFormData({})
+                    setBodyMarkers([])
+                    setSelectedMarkerId(null)
                   }}
                   className="p-1 hover:bg-clinical-100 rounded"
                 >
@@ -609,8 +674,23 @@ export default function ProcedureTemplates({
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {PROCEDURE_TEMPLATES[selectedProcedure].fields.map(field => renderField(field))}
+              {/* Body Diagram + Form Fields Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Body Diagram */}
+                <div className="lg:col-span-1">
+                  <BodyDiagram
+                    markers={bodyMarkers}
+                    onMarkersChange={setBodyMarkers}
+                    onSiteSelect={handleBodySiteSelect}
+                    selectedMarkerId={selectedMarkerId || undefined}
+                    onMarkerSelect={setSelectedMarkerId}
+                  />
+                </div>
+
+                {/* Form Fields */}
+                <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  {PROCEDURE_TEMPLATES[selectedProcedure].fields.map(field => renderField(field))}
+                </div>
               </div>
 
               {/* Preview */}

@@ -12,7 +12,17 @@ import {
   Edit,
   ArrowRight,
   Activity,
-  CheckCircle
+  CheckCircle,
+  Zap,
+  TrendingUp,
+  TrendingDown,
+  Bell,
+  AlertTriangle,
+  Microscope,
+  DollarSign,
+  ShieldCheck,
+  ChevronRight,
+  Sparkles
 } from 'lucide-react'
 import { useProvider } from '@/contexts/ProviderContext'
 import AppHeader from '@/components/AppHeader'
@@ -46,6 +56,70 @@ interface DashboardData {
     recentPatientsCount: number
   }
 }
+
+// Practice Intelligence alerts/signals (mock data for demo)
+interface PracticeAlert {
+  id: string
+  type: 'pathology' | 'auth' | 'revenue' | 'followup' | 'compliance'
+  priority: 'high' | 'medium' | 'low'
+  title: string
+  description: string
+  metric?: string
+  trend?: 'up' | 'down' | 'stable'
+  actionLabel?: string
+  actionHref?: string
+}
+
+const PRACTICE_ALERTS: PracticeAlert[] = [
+  {
+    id: '1',
+    type: 'pathology',
+    priority: 'high',
+    title: '3 Pathology Results Pending Review',
+    description: 'Includes 1 melanoma diagnosis requiring urgent patient callback',
+    actionLabel: 'Review Now',
+    actionHref: '/inbox/pathology'
+  },
+  {
+    id: '2',
+    type: 'followup',
+    priority: 'high',
+    title: '5 Patients Overdue for Biopsy Follow-up',
+    description: 'Past 90-day window for post-excision check',
+    metric: '5 patients',
+    actionLabel: 'View List',
+    actionHref: '/patients?filter=overdue-followup'
+  },
+  {
+    id: '3',
+    type: 'auth',
+    priority: 'medium',
+    title: 'Prior Auth Denial Rate: 12%',
+    description: 'Up from 8% last month. Top denials: Mohs surgery (4), biologics (3)',
+    metric: '12%',
+    trend: 'up',
+    actionLabel: 'Review Denials',
+    actionHref: '/integrations?tab=auth-status'
+  },
+  {
+    id: '4',
+    type: 'revenue',
+    priority: 'medium',
+    title: 'Revenue Trend: +8% MTD',
+    description: 'Procedure volume up 12%, cosmetic services strong',
+    metric: '+$12,400',
+    trend: 'up'
+  },
+  {
+    id: '5',
+    type: 'compliance',
+    priority: 'low',
+    title: '2 Controlled Substance Audits Due',
+    description: 'Isotretinoin patient charts require 30-day review',
+    actionLabel: 'View Audit',
+    actionHref: '/compliance/isotretinoin'
+  }
+]
 
 export default function DashboardPage() {
   const { selectedProvider } = useProvider()
@@ -186,6 +260,122 @@ export default function DashboardPage() {
                   <span className="text-3xl font-bold text-clinical-900">{data.stats.recentPatientsCount}</span>
                 </div>
                 <h3 className="text-sm font-medium text-clinical-600">Recent Patients (7d)</h3>
+              </div>
+            </div>
+
+            {/* Practice Intelligence */}
+            <div className="card mb-8 overflow-hidden">
+              <div className="px-6 py-4 border-b border-clinical-100 bg-gradient-to-r from-dermis-50 via-white to-purple-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-dermis-500 to-purple-500 flex items-center justify-center">
+                      <Sparkles className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="font-display font-semibold text-clinical-800">Practice Intelligence</h2>
+                      <p className="text-xs text-clinical-500">AI-powered insights and action items</p>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 bg-dermis-100 text-dermis-700 text-xs font-medium rounded-full">
+                    {PRACTICE_ALERTS.filter(a => a.priority === 'high').length} urgent
+                  </span>
+                </div>
+              </div>
+
+              <div className="divide-y divide-clinical-100">
+                {PRACTICE_ALERTS.map((alert) => {
+                  const getAlertIcon = () => {
+                    switch (alert.type) {
+                      case 'pathology': return <Microscope className="w-5 h-5" />
+                      case 'auth': return <ShieldCheck className="w-5 h-5" />
+                      case 'revenue': return <DollarSign className="w-5 h-5" />
+                      case 'followup': return <Bell className="w-5 h-5" />
+                      case 'compliance': return <AlertTriangle className="w-5 h-5" />
+                      default: return <Zap className="w-5 h-5" />
+                    }
+                  }
+
+                  const getAlertColors = () => {
+                    switch (alert.priority) {
+                      case 'high': return {
+                        bg: 'bg-red-50',
+                        icon: 'bg-red-100 text-red-600',
+                        badge: 'bg-red-100 text-red-700',
+                        border: 'border-l-red-500'
+                      }
+                      case 'medium': return {
+                        bg: 'bg-amber-50/50',
+                        icon: 'bg-amber-100 text-amber-600',
+                        badge: 'bg-amber-100 text-amber-700',
+                        border: 'border-l-amber-500'
+                      }
+                      default: return {
+                        bg: 'bg-clinical-50',
+                        icon: 'bg-clinical-100 text-clinical-600',
+                        badge: 'bg-clinical-100 text-clinical-700',
+                        border: 'border-l-clinical-300'
+                      }
+                    }
+                  }
+
+                  const colors = getAlertColors()
+
+                  return (
+                    <div
+                      key={alert.id}
+                      className={`px-6 py-4 border-l-4 ${colors.border} ${colors.bg} hover:bg-opacity-75 transition-colors`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className={`w-10 h-10 rounded-lg ${colors.icon} flex items-center justify-center flex-shrink-0`}>
+                          {getAlertIcon()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <h3 className="font-medium text-clinical-800">{alert.title}</h3>
+                              <p className="text-sm text-clinical-600 mt-0.5">{alert.description}</p>
+                            </div>
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                              {alert.metric && (
+                                <div className="flex items-center gap-1">
+                                  {alert.trend === 'up' && <TrendingUp className="w-4 h-4 text-green-600" />}
+                                  {alert.trend === 'down' && <TrendingDown className="w-4 h-4 text-red-600" />}
+                                  <span className={`text-sm font-semibold ${
+                                    alert.type === 'revenue' && alert.trend === 'up' ? 'text-green-600' :
+                                    alert.type === 'auth' && alert.trend === 'up' ? 'text-red-600' :
+                                    'text-clinical-700'
+                                  }`}>
+                                    {alert.metric}
+                                  </span>
+                                </div>
+                              )}
+                              {alert.actionHref && (
+                                <Link
+                                  href={alert.actionHref}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-clinical-200 text-clinical-700 text-sm font-medium rounded-lg hover:bg-clinical-50 transition-colors"
+                                >
+                                  {alert.actionLabel}
+                                  <ChevronRight className="w-4 h-4" />
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="px-6 py-3 bg-clinical-50 border-t border-clinical-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-clinical-500">
+                    Powered by Dermis AI • Updated 5 min ago
+                  </span>
+                  <button className="text-xs text-dermis-600 hover:text-dermis-700 font-medium">
+                    Configure Alerts →
+                  </button>
+                </div>
               </div>
             </div>
 
