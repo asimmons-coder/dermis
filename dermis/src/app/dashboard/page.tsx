@@ -64,7 +64,7 @@ interface DashboardData {
   }
 }
 
-// Practice Intelligence alerts/signals (mock data for demo)
+// Practice Intelligence alerts/signals
 interface PracticeAlert {
   id: string
   type: 'pathology' | 'auth' | 'revenue' | 'followup' | 'compliance'
@@ -77,102 +77,51 @@ interface PracticeAlert {
   actionHref?: string
 }
 
-const PRACTICE_ALERTS: PracticeAlert[] = [
-  {
-    id: '1',
-    type: 'pathology',
-    priority: 'high',
-    title: '3 Pathology Results Pending Review',
-    description: 'Includes 1 melanoma diagnosis requiring urgent patient callback',
-    actionLabel: 'Review Now',
-    actionHref: '/inbox/pathology'
-  },
-  {
-    id: '2',
-    type: 'followup',
-    priority: 'high',
-    title: '5 Patients Overdue for Biopsy Follow-up',
-    description: 'Past 90-day window for post-excision check',
-    metric: '5 patients',
-    actionLabel: 'View List',
-    actionHref: '/patients?filter=overdue-followup'
-  },
-  {
-    id: '3',
-    type: 'auth',
-    priority: 'medium',
-    title: 'Prior Auth Denial Rate: 12%',
-    description: 'Up from 8% last month. Top denials: Mohs surgery (4), biologics (3)',
-    metric: '12%',
-    trend: 'up',
-    actionLabel: 'Review Denials',
-    actionHref: '/integrations?tab=auth-status'
-  },
-  {
-    id: '4',
-    type: 'revenue',
-    priority: 'medium',
-    title: 'Revenue Trend: +8% MTD',
-    description: 'Procedure volume up 12%, cosmetic services strong',
-    metric: '+$12,400',
-    trend: 'up'
-  },
-  {
-    id: '5',
-    type: 'compliance',
-    priority: 'low',
-    title: '2 Controlled Substance Audits Due',
-    description: 'Isotretinoin patient charts require 30-day review',
-    actionLabel: 'View Audit',
-    actionHref: '/compliance/isotretinoin'
-  }
-]
-
-// Practice Analytics mock data
-const PRACTICE_ANALYTICS = {
+// Practice Analytics interface
+interface PracticeAnalytics {
   revenue: {
-    mtd: 187450,
-    lastMonth: 173200,
-    ytd: 2145000,
-    target: 2400000,
+    mtd: number
+    lastMonth: number
+    ytd: number
+    target: number
     breakdown: {
-      medical: 142300,
-      cosmetic: 45150
+      medical: number
+      cosmetic: number
     }
-  },
+  }
   patients: {
-    total: 4823,
-    activeThisMonth: 312,
-    newThisMonth: 47,
-    retention: 94.2
-  },
+    total: number
+    activeThisMonth: number
+    newThisMonth: number
+    retention: number
+  }
   procedures: {
-    mtd: 186,
-    avgPerDay: 8.2,
-    topProcedures: [
-      { name: 'Skin Biopsy', count: 48, revenue: 14400 },
-      { name: 'Cryotherapy', count: 62, revenue: 8060 },
-      { name: 'Excision', count: 23, revenue: 18400 },
-      { name: 'Mohs Surgery', count: 8, revenue: 32000 },
-      { name: 'Botox', count: 34, revenue: 17000 },
-      { name: 'Filler', count: 11, revenue: 8800 }
-    ]
-  },
+    mtd: number
+    avgPerDay: string | number
+    topProcedures: Array<{ name: string; code?: string; count: number; revenue: number }>
+  }
   collections: {
-    rate: 96.8,
-    outstanding: 24350,
-    avgDaysToCollect: 18
-  },
-  providers: [
-    { name: 'Dr. Sarah Chen', patients: 156, revenue: 94200, procedures: 98 },
-    { name: 'Dr. Michael Park', patients: 132, revenue: 72400, procedures: 72 },
-    { name: 'NP Emily Rodriguez', patients: 24, revenue: 20850, procedures: 16 }
-  ]
+    rate: number
+    outstanding: number
+    avgDaysToCollect: number
+  }
+  providers: Array<{ name: string; patients: number; revenue: number; procedures: number }>
+}
+
+// Default analytics for when there's no data
+const DEFAULT_ANALYTICS: PracticeAnalytics = {
+  revenue: { mtd: 0, lastMonth: 0, ytd: 0, target: 200000, breakdown: { medical: 0, cosmetic: 0 } },
+  patients: { total: 0, activeThisMonth: 0, newThisMonth: 0, retention: 0 },
+  procedures: { mtd: 0, avgPerDay: 0, topProcedures: [] },
+  collections: { rate: 0, outstanding: 0, avgDaysToCollect: 0 },
+  providers: []
 }
 
 export default function DashboardPage() {
   const { selectedProvider } = useProvider()
   const [data, setData] = useState<DashboardData | null>(null)
+  const [analytics, setAnalytics] = useState<PracticeAnalytics>(DEFAULT_ANALYTICS)
+  const [practiceAlerts, setPracticeAlerts] = useState<PracticeAlert[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -186,16 +135,27 @@ export default function DashboardPage() {
 
     try {
       const practiceId = '00000000-0000-0000-0000-000000000001'
-      const url = selectedProvider
-        ? `/api/dashboard?practiceId=${practiceId}&providerId=${selectedProvider.id}`
-        : `/api/dashboard?practiceId=${practiceId}`
+      const baseUrl = selectedProvider
+        ? `practiceId=${practiceId}&providerId=${selectedProvider.id}`
+        : `practiceId=${practiceId}`
 
-      const response = await fetch(url)
-      if (response.ok) {
-        const dashboardData = await response.json()
+      // Fetch dashboard and analytics in parallel
+      const [dashboardRes, analyticsRes] = await Promise.all([
+        fetch(`/api/dashboard?${baseUrl}`),
+        fetch(`/api/analytics?${baseUrl}`)
+      ])
+
+      if (dashboardRes.ok) {
+        const dashboardData = await dashboardRes.json()
         setData(dashboardData)
       } else {
         setError('Failed to load dashboard data')
+      }
+
+      if (analyticsRes.ok) {
+        const analyticsData = await analyticsRes.json()
+        setAnalytics(analyticsData.analytics || DEFAULT_ANALYTICS)
+        setPracticeAlerts(analyticsData.practiceAlerts || [])
       }
     } catch (err) {
       setError('Failed to load dashboard data')
@@ -289,13 +249,23 @@ export default function DashboardPage() {
                     <div>
                       <p className="text-sm text-emerald-600 font-medium">MTD Revenue</p>
                       <p className="text-2xl font-bold text-emerald-700 mt-1">
-                        ${PRACTICE_ANALYTICS.revenue.mtd.toLocaleString()}
+                        ${analytics.revenue.mtd.toLocaleString()}
                       </p>
                       <div className="flex items-center gap-1 mt-2">
-                        <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-                        <span className="text-xs text-emerald-600 font-medium">
-                          +{(((PRACTICE_ANALYTICS.revenue.mtd - PRACTICE_ANALYTICS.revenue.lastMonth) / PRACTICE_ANALYTICS.revenue.lastMonth) * 100).toFixed(1)}% vs last month
-                        </span>
+                        {analytics.revenue.lastMonth > 0 ? (
+                          <>
+                            {analytics.revenue.mtd >= analytics.revenue.lastMonth ? (
+                              <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                              <TrendingDown className="w-3.5 h-3.5 text-red-500" />
+                            )}
+                            <span className={`text-xs font-medium ${analytics.revenue.mtd >= analytics.revenue.lastMonth ? 'text-emerald-600' : 'text-red-500'}`}>
+                              {analytics.revenue.mtd >= analytics.revenue.lastMonth ? '+' : ''}{(((analytics.revenue.mtd - analytics.revenue.lastMonth) / analytics.revenue.lastMonth) * 100).toFixed(1)}% vs last month
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-emerald-600">First month of data</span>
+                        )}
                       </div>
                     </div>
                     <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
@@ -310,11 +280,11 @@ export default function DashboardPage() {
                     <div>
                       <p className="text-sm text-blue-600 font-medium">Total Patients</p>
                       <p className="text-2xl font-bold text-blue-700 mt-1">
-                        {PRACTICE_ANALYTICS.patients.total.toLocaleString()}
+                        {analytics.patients.total.toLocaleString()}
                       </p>
                       <div className="flex items-center gap-1 mt-2">
                         <span className="text-xs text-blue-600">
-                          <span className="font-medium">+{PRACTICE_ANALYTICS.patients.newThisMonth}</span> new this month
+                          <span className="font-medium">+{analytics.patients.newThisMonth}</span> new this month
                         </span>
                       </div>
                     </div>
@@ -330,11 +300,11 @@ export default function DashboardPage() {
                     <div>
                       <p className="text-sm text-purple-600 font-medium">Procedures MTD</p>
                       <p className="text-2xl font-bold text-purple-700 mt-1">
-                        {PRACTICE_ANALYTICS.procedures.mtd}
+                        {analytics.procedures.mtd}
                       </p>
                       <div className="flex items-center gap-1 mt-2">
                         <span className="text-xs text-purple-600">
-                          Avg <span className="font-medium">{PRACTICE_ANALYTICS.procedures.avgPerDay}</span>/day
+                          Avg <span className="font-medium">{analytics.procedures.avgPerDay}</span>/day
                         </span>
                       </div>
                     </div>
@@ -350,11 +320,11 @@ export default function DashboardPage() {
                     <div>
                       <p className="text-sm text-amber-600 font-medium">Collection Rate</p>
                       <p className="text-2xl font-bold text-amber-700 mt-1">
-                        {PRACTICE_ANALYTICS.collections.rate}%
+                        {analytics.collections.rate}%
                       </p>
                       <div className="flex items-center gap-1 mt-2">
                         <span className="text-xs text-amber-600">
-                          ${PRACTICE_ANALYTICS.collections.outstanding.toLocaleString()} outstanding
+                          ${analytics.collections.outstanding.toLocaleString()} outstanding
                         </span>
                       </div>
                     </div>
@@ -382,11 +352,11 @@ export default function DashboardPage() {
                     <div className="h-full flex">
                       <div
                         className="bg-dermis-500 transition-all"
-                        style={{ width: `${(PRACTICE_ANALYTICS.revenue.breakdown.medical / PRACTICE_ANALYTICS.revenue.mtd) * 100}%` }}
+                        style={{ width: `${analytics.revenue.mtd > 0 ? (analytics.revenue.breakdown.medical / analytics.revenue.mtd) * 100 : 0}%` }}
                       />
                       <div
                         className="bg-pink-400 transition-all"
-                        style={{ width: `${(PRACTICE_ANALYTICS.revenue.breakdown.cosmetic / PRACTICE_ANALYTICS.revenue.mtd) * 100}%` }}
+                        style={{ width: `${analytics.revenue.mtd > 0 ? (analytics.revenue.breakdown.cosmetic / analytics.revenue.mtd) * 100 : 0}%` }}
                       />
                     </div>
                   </div>
@@ -398,9 +368,9 @@ export default function DashboardPage() {
                         <span className="text-sm text-clinical-700">Medical</span>
                       </div>
                       <div className="text-right">
-                        <span className="font-semibold text-clinical-800">${PRACTICE_ANALYTICS.revenue.breakdown.medical.toLocaleString()}</span>
+                        <span className="font-semibold text-clinical-800">${analytics.revenue.breakdown.medical.toLocaleString()}</span>
                         <span className="text-xs text-clinical-500 ml-2">
-                          ({((PRACTICE_ANALYTICS.revenue.breakdown.medical / PRACTICE_ANALYTICS.revenue.mtd) * 100).toFixed(0)}%)
+                          ({analytics.revenue.mtd > 0 ? ((analytics.revenue.breakdown.medical / analytics.revenue.mtd) * 100).toFixed(0) : 0}%)
                         </span>
                       </div>
                     </div>
@@ -410,9 +380,9 @@ export default function DashboardPage() {
                         <span className="text-sm text-clinical-700">Cosmetic</span>
                       </div>
                       <div className="text-right">
-                        <span className="font-semibold text-clinical-800">${PRACTICE_ANALYTICS.revenue.breakdown.cosmetic.toLocaleString()}</span>
+                        <span className="font-semibold text-clinical-800">${analytics.revenue.breakdown.cosmetic.toLocaleString()}</span>
                         <span className="text-xs text-clinical-500 ml-2">
-                          ({((PRACTICE_ANALYTICS.revenue.breakdown.cosmetic / PRACTICE_ANALYTICS.revenue.mtd) * 100).toFixed(0)}%)
+                          ({analytics.revenue.mtd > 0 ? ((analytics.revenue.breakdown.cosmetic / analytics.revenue.mtd) * 100).toFixed(0) : 0}%)
                         </span>
                       </div>
                     </div>
@@ -423,17 +393,17 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between text-sm mb-2">
                       <span className="text-clinical-600">YTD Progress</span>
                       <span className="font-medium text-clinical-800">
-                        ${(PRACTICE_ANALYTICS.revenue.ytd / 1000).toFixed(0)}K / ${(PRACTICE_ANALYTICS.revenue.target / 1000).toFixed(0)}K
+                        ${(analytics.revenue.ytd / 1000).toFixed(0)}K / ${(analytics.revenue.target / 1000).toFixed(0)}K
                       </span>
                     </div>
                     <div className="h-2 rounded-full bg-clinical-100 overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-dermis-400 to-dermis-600 transition-all"
-                        style={{ width: `${(PRACTICE_ANALYTICS.revenue.ytd / PRACTICE_ANALYTICS.revenue.target) * 100}%` }}
+                        style={{ width: `${analytics.revenue.target > 0 ? Math.min((analytics.revenue.ytd / analytics.revenue.target) * 100, 100) : 0}%` }}
                       />
                     </div>
                     <p className="text-xs text-clinical-500 mt-1">
-                      {((PRACTICE_ANALYTICS.revenue.ytd / PRACTICE_ANALYTICS.revenue.target) * 100).toFixed(0)}% of annual target
+                      {analytics.revenue.target > 0 ? ((analytics.revenue.ytd / analytics.revenue.target) * 100).toFixed(0) : 0}% of annual target
                     </p>
                   </div>
                 </div>
@@ -448,26 +418,33 @@ export default function DashboardPage() {
                     <span className="text-xs text-clinical-500">MTD</span>
                   </div>
                   <div className="space-y-3">
-                    {PRACTICE_ANALYTICS.procedures.topProcedures.slice(0, 5).map((proc, i) => (
-                      <div key={proc.name} className="flex items-center gap-3">
-                        <span className="text-xs font-medium text-clinical-400 w-4">{i + 1}</span>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm text-clinical-700">{proc.name}</span>
-                            <span className="text-sm font-medium text-clinical-800">{proc.count}</span>
-                          </div>
-                          <div className="h-1.5 rounded-full bg-clinical-100 overflow-hidden">
-                            <div
-                              className="h-full bg-dermis-400 transition-all"
-                              style={{ width: `${(proc.count / Math.max(...PRACTICE_ANALYTICS.procedures.topProcedures.map(p => p.count))) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                        <span className="text-xs text-clinical-500 w-16 text-right">
-                          ${(proc.revenue / 1000).toFixed(1)}K
-                        </span>
+                    {analytics.procedures.topProcedures.length === 0 ? (
+                      <div className="text-center py-4 text-clinical-500 text-sm">
+                        No procedures recorded yet
                       </div>
-                    ))}
+                    ) : analytics.procedures.topProcedures.slice(0, 5).map((proc, i) => {
+                      const maxCount = Math.max(...analytics.procedures.topProcedures.map(p => p.count), 1)
+                      return (
+                        <div key={proc.name} className="flex items-center gap-3">
+                          <span className="text-xs font-medium text-clinical-400 w-4">{i + 1}</span>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm text-clinical-700">{proc.name}</span>
+                              <span className="text-sm font-medium text-clinical-800">{proc.count}</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-clinical-100 overflow-hidden">
+                              <div
+                                className="h-full bg-dermis-400 transition-all"
+                                style={{ width: `${(proc.count / maxCount) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                          <span className="text-xs text-clinical-500 w-16 text-right">
+                            ${(proc.revenue / 1000).toFixed(1)}K
+                          </span>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
 
@@ -481,7 +458,11 @@ export default function DashboardPage() {
                     <span className="text-xs text-clinical-500">MTD</span>
                   </div>
                   <div className="space-y-4">
-                    {PRACTICE_ANALYTICS.providers.map((provider) => (
+                    {analytics.providers.length === 0 ? (
+                      <div className="text-center py-4 text-clinical-500 text-sm">
+                        No provider data yet
+                      </div>
+                    ) : analytics.providers.map((provider) => (
                       <div key={provider.name} className="p-3 rounded-lg bg-clinical-50">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-clinical-800 text-sm">{provider.name}</span>
@@ -530,7 +511,7 @@ export default function DashboardPage() {
                     <Target className="w-5 h-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-xl font-bold text-clinical-900">{PRACTICE_ANALYTICS.patients.retention}%</p>
+                    <p className="text-xl font-bold text-clinical-900">{analytics.patients.retention}%</p>
                     <p className="text-xs text-clinical-500">Retention Rate</p>
                   </div>
                 </div>
@@ -539,7 +520,7 @@ export default function DashboardPage() {
                     <CreditCard className="w-5 h-5 text-purple-600" />
                   </div>
                   <div>
-                    <p className="text-xl font-bold text-clinical-900">{PRACTICE_ANALYTICS.collections.avgDaysToCollect}d</p>
+                    <p className="text-xl font-bold text-clinical-900">{analytics.collections.avgDaysToCollect}d</p>
                     <p className="text-xs text-clinical-500">Avg Collection</p>
                   </div>
                 </div>
@@ -560,13 +541,19 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <span className="px-3 py-1 bg-dermis-100 text-dermis-700 text-xs font-medium rounded-full">
-                    {PRACTICE_ALERTS.filter(a => a.priority === 'high').length} urgent
+                    {practiceAlerts.filter(a => a.priority === 'high').length} urgent
                   </span>
                 </div>
               </div>
 
               <div className="divide-y divide-clinical-100">
-                {PRACTICE_ALERTS.map((alert) => {
+                {practiceAlerts.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-3" />
+                    <h3 className="font-medium text-clinical-800 mb-1">All Caught Up!</h3>
+                    <p className="text-sm text-clinical-500">No urgent items requiring your attention</p>
+                  </div>
+                ) : practiceAlerts.map((alert) => {
                   const getAlertIcon = () => {
                     switch (alert.type) {
                       case 'pathology': return <Microscope className="w-5 h-5" />
