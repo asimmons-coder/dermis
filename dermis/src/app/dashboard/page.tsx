@@ -117,6 +117,99 @@ const DEFAULT_ANALYTICS: PracticeAnalytics = {
   providers: []
 }
 
+// Demo mode data for impressive presentations
+const DEMO_ANALYTICS: PracticeAnalytics = {
+  revenue: {
+    mtd: 187450,
+    lastMonth: 173200,
+    ytd: 2145000,
+    target: 2400000,
+    breakdown: {
+      medical: 142300,
+      cosmetic: 45150
+    }
+  },
+  patients: {
+    total: 4823,
+    activeThisMonth: 312,
+    newThisMonth: 47,
+    retention: 94.2
+  },
+  procedures: {
+    mtd: 186,
+    avgPerDay: 8.2,
+    topProcedures: [
+      { name: 'Skin Biopsy', count: 48, revenue: 14400 },
+      { name: 'Cryotherapy', count: 62, revenue: 8060 },
+      { name: 'Excision', count: 23, revenue: 18400 },
+      { name: 'Mohs Surgery', count: 8, revenue: 32000 },
+      { name: 'Botox', count: 34, revenue: 17000 },
+      { name: 'Filler', count: 11, revenue: 8800 }
+    ]
+  },
+  collections: {
+    rate: 96.8,
+    outstanding: 24350,
+    avgDaysToCollect: 18
+  },
+  providers: [
+    { name: 'Dr. Sarah Chen', patients: 156, revenue: 94200, procedures: 98 },
+    { name: 'Dr. Michael Park', patients: 132, revenue: 72400, procedures: 72 },
+    { name: 'NP Emily Rodriguez', patients: 24, revenue: 20850, procedures: 16 }
+  ]
+}
+
+const DEMO_ALERTS: PracticeAlert[] = [
+  {
+    id: '1',
+    type: 'pathology',
+    priority: 'high',
+    title: '3 Pathology Results Pending Review',
+    description: 'Includes 1 melanoma diagnosis requiring urgent patient callback',
+    actionLabel: 'Review Now',
+    actionHref: '/inbox/pathology'
+  },
+  {
+    id: '2',
+    type: 'followup',
+    priority: 'high',
+    title: '5 Patients Overdue for Biopsy Follow-up',
+    description: 'Past 90-day window for post-excision check',
+    metric: '5 patients',
+    actionLabel: 'View List',
+    actionHref: '/patients?filter=overdue-followup'
+  },
+  {
+    id: '3',
+    type: 'auth',
+    priority: 'medium',
+    title: 'Prior Auth Denial Rate: 12%',
+    description: 'Up from 8% last month. Top denials: Mohs surgery (4), biologics (3)',
+    metric: '12%',
+    trend: 'up',
+    actionLabel: 'Review Denials',
+    actionHref: '/integrations?tab=auth-status'
+  },
+  {
+    id: '4',
+    type: 'revenue',
+    priority: 'medium',
+    title: 'Revenue Trend: +8% MTD',
+    description: 'Procedure volume up 12%, cosmetic services strong',
+    metric: '+$12,400',
+    trend: 'up'
+  },
+  {
+    id: '5',
+    type: 'compliance',
+    priority: 'low',
+    title: '2 Controlled Substance Audits Due',
+    description: 'Isotretinoin patient charts require 30-day review',
+    actionLabel: 'View Audit',
+    actionHref: '/compliance/isotretinoin'
+  }
+]
+
 export default function DashboardPage() {
   const { selectedProvider } = useProvider()
   const [data, setData] = useState<DashboardData | null>(null)
@@ -124,10 +217,11 @@ export default function DashboardPage() {
   const [practiceAlerts, setPracticeAlerts] = useState<PracticeAlert[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [demoMode, setDemoMode] = useState(true) // Default to demo mode for presentations
 
   useEffect(() => {
     loadDashboard()
-  }, [selectedProvider])
+  }, [selectedProvider, demoMode])
 
   const loadDashboard = async () => {
     setIsLoading(true)
@@ -139,11 +233,8 @@ export default function DashboardPage() {
         ? `practiceId=${practiceId}&providerId=${selectedProvider.id}`
         : `practiceId=${practiceId}`
 
-      // Fetch dashboard and analytics in parallel
-      const [dashboardRes, analyticsRes] = await Promise.all([
-        fetch(`/api/dashboard?${baseUrl}`),
-        fetch(`/api/analytics?${baseUrl}`)
-      ])
+      // Fetch real dashboard data (appointments, notes, etc.)
+      const dashboardRes = await fetch(`/api/dashboard?${baseUrl}`)
 
       if (dashboardRes.ok) {
         const dashboardData = await dashboardRes.json()
@@ -152,10 +243,17 @@ export default function DashboardPage() {
         setError('Failed to load dashboard data')
       }
 
-      if (analyticsRes.ok) {
-        const analyticsData = await analyticsRes.json()
-        setAnalytics(analyticsData.analytics || DEFAULT_ANALYTICS)
-        setPracticeAlerts(analyticsData.practiceAlerts || [])
+      // Use demo data or fetch real analytics based on mode
+      if (demoMode) {
+        setAnalytics(DEMO_ANALYTICS)
+        setPracticeAlerts(DEMO_ALERTS)
+      } else {
+        const analyticsRes = await fetch(`/api/analytics?${baseUrl}`)
+        if (analyticsRes.ok) {
+          const analyticsData = await analyticsRes.json()
+          setAnalytics(analyticsData.analytics || DEFAULT_ANALYTICS)
+          setPracticeAlerts(analyticsData.practiceAlerts || [])
+        }
       }
     } catch (err) {
       setError('Failed to load dashboard data')
@@ -205,7 +303,20 @@ export default function DashboardPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-display font-bold text-clinical-900 mb-2">Dashboard</h1>
+              <div className="flex items-center gap-3 mb-2">
+                <h1 className="text-3xl font-display font-bold text-clinical-900">Dashboard</h1>
+                {/* Demo Mode Toggle */}
+                <button
+                  onClick={() => setDemoMode(!demoMode)}
+                  className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
+                    demoMode
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md'
+                      : 'bg-clinical-100 text-clinical-600 hover:bg-clinical-200'
+                  }`}
+                >
+                  {demoMode ? 'Demo Mode' : 'Live Data'}
+                </button>
+              </div>
               <p className="text-clinical-600">
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
