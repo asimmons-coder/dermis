@@ -17,8 +17,11 @@ import {
 } from 'lucide-react'
 import BodyDiagram, { LesionMarker } from './BodyDiagram'
 
+// Procedure category type
+type ProcedureCategory = 'medical' | 'cosmetic'
+
 // Procedure definitions with CPT codes
-const PROCEDURE_TEMPLATES = {
+const MEDICAL_PROCEDURES = {
   shave_biopsy: {
     name: 'Shave Biopsy',
     icon: Scissors,
@@ -140,6 +143,129 @@ const PROCEDURE_TEMPLATES = {
   }
 }
 
+// Cosmetic procedure definitions
+const COSMETIC_PROCEDURES = {
+  botox: {
+    name: 'Botox / Neurotoxin',
+    icon: Syringe,
+    color: 'pink',
+    cptCodes: [
+      { code: '64612', description: 'Chemodenervation of muscle(s); muscle(s) innervated by facial nerve' },
+      { code: '64615', description: 'Chemodenervation of muscle(s); muscle(s) innervated by facial, trigeminal, cervical spinal and accessory nerves, bilateral' }
+    ],
+    fields: ['treatment_area', 'product', 'units', 'dilution', 'injection_sites'],
+    defaultValues: {
+      product: 'Botox Cosmetic (onabotulinumtoxinA)',
+      dilution: '2.5ml NS per 100 units',
+      units: '20'
+    }
+  },
+  filler: {
+    name: 'Dermal Filler',
+    icon: Syringe,
+    color: 'rose',
+    cptCodes: [
+      { code: '11950', description: 'Subcutaneous injection of filling material; 1cc or less' },
+      { code: '11951', description: 'Subcutaneous injection of filling material; 1.1 to 5.0cc' },
+      { code: '11952', description: 'Subcutaneous injection of filling material; 5.1 to 10.0cc' },
+      { code: '11954', description: 'Subcutaneous injection of filling material; over 10.0cc' }
+    ],
+    fields: ['treatment_area', 'product', 'volume', 'technique', 'anesthesia'],
+    defaultValues: {
+      product: 'Juvederm Ultra Plus XC',
+      technique: 'Serial puncture with linear threading',
+      anesthesia: 'Topical + product contains lidocaine'
+    }
+  },
+  chemical_peel: {
+    name: 'Chemical Peel',
+    icon: Target,
+    color: 'violet',
+    cptCodes: [
+      { code: '15780', description: 'Dermabrasion; total face' },
+      { code: '15781', description: 'Dermabrasion; segmental, face' },
+      { code: '15782', description: 'Dermabrasion; regional, other than face' },
+      { code: '15783', description: 'Dermabrasion; superficial, any site' }
+    ],
+    fields: ['treatment_area', 'peel_type', 'peel_agent', 'application_time', 'layers'],
+    defaultValues: {
+      peel_type: 'Superficial',
+      peel_agent: 'Glycolic acid 30%',
+      application_time: '2-3 minutes',
+      layers: '1'
+    }
+  },
+  laser_treatment: {
+    name: 'Laser Treatment',
+    icon: Snowflake,
+    color: 'indigo',
+    cptCodes: [
+      { code: '96920', description: 'Laser treatment for inflammatory skin disease; total area less than 250 sq cm' },
+      { code: '96921', description: 'Laser treatment for inflammatory skin disease; 250 to 500 sq cm' },
+      { code: '96922', description: 'Laser treatment for inflammatory skin disease; over 500 sq cm' },
+      { code: '17106', description: 'Destruction of cutaneous vascular lesions; less than 10 sq cm' }
+    ],
+    fields: ['treatment_area', 'laser_type', 'settings', 'passes', 'cooling', 'indication'],
+    defaultValues: {
+      laser_type: 'IPL',
+      passes: '2-3',
+      cooling: 'Contact cooling'
+    }
+  },
+  microneedling: {
+    name: 'Microneedling',
+    icon: Target,
+    color: 'teal',
+    cptCodes: [
+      { code: '17999', description: 'Unlisted procedure, skin, mucous membrane and subcutaneous tissue' }
+    ],
+    fields: ['treatment_area', 'device', 'needle_depth', 'passes', 'serum', 'anesthesia'],
+    defaultValues: {
+      device: 'SkinPen',
+      needle_depth: '1.0-1.5mm',
+      passes: '3-4 passes',
+      anesthesia: 'Topical lidocaine 23%'
+    }
+  },
+  prp: {
+    name: 'PRP Treatment',
+    icon: Syringe,
+    color: 'yellow',
+    cptCodes: [
+      { code: '0232T', description: 'Injection(s), platelet rich plasma, any site' }
+    ],
+    fields: ['treatment_area', 'blood_draw', 'centrifuge_settings', 'prp_volume', 'technique'],
+    defaultValues: {
+      blood_draw: '60ml whole blood',
+      centrifuge_settings: '3500 RPM x 15 min',
+      prp_volume: '6-8ml',
+      technique: 'Injection with microneedling'
+    }
+  },
+  sclerotherapy: {
+    name: 'Sclerotherapy',
+    icon: Syringe,
+    color: 'sky',
+    cptCodes: [
+      { code: '36465', description: 'Injection of non-compounded foam sclerosant; single incompetent extremity truncal vein' },
+      { code: '36468', description: 'Injection of sclerosant; spider veins, limb or trunk, per session' },
+      { code: '36470', description: 'Injection of sclerosant; single incompetent vein' }
+    ],
+    fields: ['treatment_area', 'sclerosant', 'concentration', 'volume', 'vein_size', 'vessels_treated'],
+    defaultValues: {
+      sclerosant: 'Polidocanol (Asclera)',
+      concentration: '0.5%',
+      vein_size: '1-3mm spider veins'
+    }
+  }
+}
+
+// Combined procedure templates
+const PROCEDURE_TEMPLATES = {
+  ...MEDICAL_PROCEDURES,
+  ...COSMETIC_PROCEDURES
+}
+
 const BODY_SITES = [
   'Scalp', 'Forehead', 'Temple', 'Cheek', 'Nose', 'Lip', 'Chin', 'Ear', 'Neck',
   'Chest', 'Back', 'Abdomen', 'Shoulder', 'Upper arm', 'Forearm', 'Wrist', 'Hand', 'Finger',
@@ -171,6 +297,7 @@ export default function ProcedureTemplates({
   onNoteAppend
 }: ProcedureTemplatesProps) {
   const [isExpanded, setIsExpanded] = useState(true)
+  const [category, setCategory] = useState<ProcedureCategory>('medical')
   const [selectedProcedure, setSelectedProcedure] = useState<keyof typeof PROCEDURE_TEMPLATES | null>(null)
   const [formData, setFormData] = useState<Record<string, string | number>>({})
   const [completedProcedures, setCompletedProcedures] = useState<Procedure[]>([])
@@ -274,6 +401,29 @@ export default function ProcedureTemplates({
       case 'id_abscess':
         return `I&D ABSCESS: ${data.laterality || ''} ${data.site || ''}, ${data.size || ''}cm abscess. Anesthesia: ${data.anesthesia || 'local anesthesia'}. Incision made, ${data.drainage || 'purulent material expressed'}. ${data.packing || 'Wound packed'}. ${data.culture || 'Culture sent'}. Patient to follow up in 48-72 hours for recheck and packing change.`
 
+      // Cosmetic procedures
+      case 'botox':
+        return `NEUROTOXIN INJECTION: ${data.treatment_area || 'facial muscles'}. Product: ${data.product || 'Botox Cosmetic'}. Total units: ${data.units || '20'}. Dilution: ${data.dilution || 'standard'}. Injection sites: ${data.injection_sites || 'as marked'}. Patient tolerated procedure well. Reviewed post-procedure instructions including avoiding lying down for 4 hours, no strenuous exercise for 24 hours. Results expected in 3-14 days.`
+
+      case 'filler':
+        const volume = parseFloat(data.volume as string) || 1
+        return `DERMAL FILLER INJECTION: ${data.treatment_area || 'facial area'}. Product: ${data.product || 'hyaluronic acid filler'}, ${volume}ml total. Technique: ${data.technique || 'injection'}. Anesthesia: ${data.anesthesia || 'topical'}. Patient tolerated procedure well. Reviewed post-procedure care: ice as needed, avoid pressure to treated areas, massage if lumps noted. Emergency instructions provided regarding vascular occlusion signs.`
+
+      case 'chemical_peel':
+        return `CHEMICAL PEEL: ${data.peel_type || 'Superficial'} peel to ${data.treatment_area || 'face'}. Agent: ${data.peel_agent || 'glycolic acid'}. Application time: ${data.application_time || '2-3 minutes'}. Layers: ${data.layers || '1'}. Neutralized and removed. Patient tolerated well. Post-peel instructions reviewed: sun avoidance, gentle skincare, expected peeling in 3-7 days.`
+
+      case 'laser_treatment':
+        return `LASER TREATMENT: ${data.treatment_area || 'treatment area'} treated with ${data.laser_type || 'laser'}. Indication: ${data.indication || 'as indicated'}. Settings: ${data.settings || 'per protocol'}. Passes: ${data.passes || '2-3'}. Cooling: ${data.cooling || 'contact cooling'}. Patient tolerated procedure well. Post-procedure care reviewed: sun avoidance, gentle skincare, expected downtime discussed.`
+
+      case 'microneedling':
+        return `MICRONEEDLING: ${data.treatment_area || 'face'} treated with ${data.device || 'microneedling device'}. Needle depth: ${data.needle_depth || '1.0mm'}. Passes: ${data.passes || '3-4'}. Serum applied: ${data.serum || 'hyaluronic acid'}. Anesthesia: ${data.anesthesia || 'topical lidocaine'}. Patient tolerated procedure well. Post-procedure instructions: avoid sun, makeup, and active skincare for 24-48 hours.`
+
+      case 'prp':
+        return `PRP TREATMENT: ${data.treatment_area || 'treatment area'}. Blood draw: ${data.blood_draw || '60ml'}. Centrifuge: ${data.centrifuge_settings || 'standard protocol'}. PRP volume obtained: ${data.prp_volume || '6-8ml'}. Application technique: ${data.technique || 'injection'}. Patient tolerated procedure well. Post-procedure care reviewed.`
+
+      case 'sclerotherapy':
+        return `SCLEROTHERAPY: ${data.treatment_area || 'lower extremity veins'}. Sclerosant: ${data.sclerosant || 'polidocanol'} ${data.concentration || '0.5%'}. Volume used: ${data.volume || 'as needed'}. Vein characteristics: ${data.vein_size || 'spider veins'}. Vessels treated: ${data.vessels_treated || 'multiple'}. Compression applied. Patient instructed to wear compression stockings and walk regularly. Avoid sun exposure to treated areas.`
+
       default:
         return ''
     }
@@ -304,6 +454,15 @@ export default function ProcedureTemplates({
       if (size <= 2.0) return template.cptCodes[2]
       if (size <= 3.0) return template.cptCodes[3]
       return template.cptCodes[4]
+    }
+
+    // Filler volume-based CPT selection
+    if (procedureType === 'filler') {
+      const vol = parseFloat(data.volume as string) || 1
+      if (vol <= 1.0) return template.cptCodes[0]
+      if (vol <= 5.0) return template.cptCodes[1]
+      if (vol <= 10.0) return template.cptCodes[2]
+      return template.cptCodes[3]
     }
 
     // Default to first CPT code
@@ -581,6 +740,143 @@ export default function ProcedureTemplates({
           </div>
         )
 
+      // Cosmetic procedure fields
+      case 'treatment_area':
+        return (
+          <div key={field}>
+            <label className="label">Treatment Area</label>
+            <select
+              value={formData.treatment_area as string || ''}
+              onChange={(e) => handleFieldChange('treatment_area', e.target.value)}
+              className="input"
+            >
+              <option value="">Select area...</option>
+              <option value="Glabella (frown lines)">Glabella (frown lines)</option>
+              <option value="Forehead (horizontal lines)">Forehead (horizontal lines)</option>
+              <option value="Crow's feet">Crow's feet</option>
+              <option value="Perioral (lip lines)">Perioral (lip lines)</option>
+              <option value="Nasolabial folds">Nasolabial folds</option>
+              <option value="Marionette lines">Marionette lines</option>
+              <option value="Lips">Lips</option>
+              <option value="Cheeks / midface">Cheeks / midface</option>
+              <option value="Jawline">Jawline</option>
+              <option value="Chin">Chin</option>
+              <option value="Under eyes (tear troughs)">Under eyes (tear troughs)</option>
+              <option value="Temples">Temples</option>
+              <option value="Neck (platysmal bands)">Neck (platysmal bands)</option>
+              <option value="Full face">Full face</option>
+              <option value="Décolletage">Décolletage</option>
+              <option value="Hands">Hands</option>
+              <option value="Lower extremities">Lower extremities</option>
+            </select>
+          </div>
+        )
+
+      case 'product':
+        return (
+          <div key={field}>
+            <label className="label">Product</label>
+            <select
+              value={formData.product as string || ''}
+              onChange={(e) => handleFieldChange('product', e.target.value)}
+              className="input"
+            >
+              <option value="">Select product...</option>
+              <optgroup label="Neurotoxins">
+                <option value="Botox Cosmetic (onabotulinumtoxinA)">Botox Cosmetic (onabotulinumtoxinA)</option>
+                <option value="Dysport (abobotulinumtoxinA)">Dysport (abobotulinumtoxinA)</option>
+                <option value="Xeomin (incobotulinumtoxinA)">Xeomin (incobotulinumtoxinA)</option>
+                <option value="Jeuveau (prabotulinumtoxinA)">Jeuveau (prabotulinumtoxinA)</option>
+                <option value="Daxxify (daxibotulinumtoxinA)">Daxxify (daxibotulinumtoxinA)</option>
+              </optgroup>
+              <optgroup label="Hyaluronic Acid Fillers">
+                <option value="Juvederm Ultra XC">Juvederm Ultra XC</option>
+                <option value="Juvederm Ultra Plus XC">Juvederm Ultra Plus XC</option>
+                <option value="Juvederm Voluma XC">Juvederm Voluma XC</option>
+                <option value="Juvederm Volbella XC">Juvederm Volbella XC</option>
+                <option value="Juvederm Vollure XC">Juvederm Vollure XC</option>
+                <option value="Restylane">Restylane</option>
+                <option value="Restylane Lyft">Restylane Lyft</option>
+                <option value="Restylane Silk">Restylane Silk</option>
+                <option value="Restylane Kysse">Restylane Kysse</option>
+                <option value="Restylane Contour">Restylane Contour</option>
+                <option value="RHA Collection">RHA Collection</option>
+                <option value="Belotero Balance">Belotero Balance</option>
+                <option value="Versa">Versa</option>
+              </optgroup>
+              <optgroup label="Biostimulators">
+                <option value="Sculptra (PLLA)">Sculptra (PLLA)</option>
+                <option value="Radiesse">Radiesse</option>
+              </optgroup>
+            </select>
+          </div>
+        )
+
+      case 'units':
+        return (
+          <div key={field}>
+            <label className="label">Units</label>
+            <input
+              type="number"
+              min="1"
+              value={formData.units as number || ''}
+              onChange={(e) => handleFieldChange('units', e.target.value)}
+              className="input w-24"
+              placeholder="e.g., 20"
+            />
+          </div>
+        )
+
+      case 'volume':
+        return (
+          <div key={field}>
+            <label className="label">Volume (ml/cc)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0.1"
+              value={formData.volume as number || ''}
+              onChange={(e) => handleFieldChange('volume', e.target.value)}
+              className="input w-24"
+              placeholder="e.g., 1.0"
+            />
+          </div>
+        )
+
+      case 'dilution':
+      case 'injection_sites':
+      case 'technique':
+      case 'peel_type':
+      case 'peel_agent':
+      case 'application_time':
+      case 'layers':
+      case 'laser_type':
+      case 'settings':
+      case 'passes':
+      case 'cooling':
+      case 'indication':
+      case 'device':
+      case 'needle_depth':
+      case 'serum':
+      case 'blood_draw':
+      case 'centrifuge_settings':
+      case 'prp_volume':
+      case 'sclerosant':
+      case 'concentration':
+      case 'vein_size':
+      case 'vessels_treated':
+        return (
+          <div key={field}>
+            <label className="label">{field.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</label>
+            <input
+              type="text"
+              value={formData[field] as string || ''}
+              onChange={(e) => handleFieldChange(field, e.target.value)}
+              className="input"
+            />
+          </div>
+        )
+
       default:
         return null
     }
@@ -588,6 +884,7 @@ export default function ProcedureTemplates({
 
   const getColorClasses = (color: string, selected: boolean) => {
     const colors: Record<string, { bg: string; hover: string; selected: string; icon: string }> = {
+      // Medical procedure colors
       blue: { bg: 'bg-blue-50', hover: 'hover:bg-blue-100', selected: 'bg-blue-500 text-white', icon: 'text-blue-600' },
       purple: { bg: 'bg-purple-50', hover: 'hover:bg-purple-100', selected: 'bg-purple-500 text-white', icon: 'text-purple-600' },
       cyan: { bg: 'bg-cyan-50', hover: 'hover:bg-cyan-100', selected: 'bg-cyan-500 text-white', icon: 'text-cyan-600' },
@@ -595,9 +892,28 @@ export default function ProcedureTemplates({
       green: { bg: 'bg-green-50', hover: 'hover:bg-green-100', selected: 'bg-green-500 text-white', icon: 'text-green-600' },
       red: { bg: 'bg-red-50', hover: 'hover:bg-red-100', selected: 'bg-red-500 text-white', icon: 'text-red-600' },
       amber: { bg: 'bg-amber-50', hover: 'hover:bg-amber-100', selected: 'bg-amber-500 text-white', icon: 'text-amber-600' },
+      // Cosmetic procedure colors
+      pink: { bg: 'bg-pink-50', hover: 'hover:bg-pink-100', selected: 'bg-pink-500 text-white', icon: 'text-pink-600' },
+      rose: { bg: 'bg-rose-50', hover: 'hover:bg-rose-100', selected: 'bg-rose-500 text-white', icon: 'text-rose-600' },
+      violet: { bg: 'bg-violet-50', hover: 'hover:bg-violet-100', selected: 'bg-violet-500 text-white', icon: 'text-violet-600' },
+      indigo: { bg: 'bg-indigo-50', hover: 'hover:bg-indigo-100', selected: 'bg-indigo-500 text-white', icon: 'text-indigo-600' },
+      teal: { bg: 'bg-teal-50', hover: 'hover:bg-teal-100', selected: 'bg-teal-500 text-white', icon: 'text-teal-600' },
+      yellow: { bg: 'bg-yellow-50', hover: 'hover:bg-yellow-100', selected: 'bg-yellow-500 text-white', icon: 'text-yellow-600' },
+      sky: { bg: 'bg-sky-50', hover: 'hover:bg-sky-100', selected: 'bg-sky-500 text-white', icon: 'text-sky-600' },
     }
     const c = colors[color] || colors.blue
     return selected ? c.selected : `${c.bg} ${c.hover}`
+  }
+
+  const getIconColorClass = (color: string) => {
+    const iconColors: Record<string, string> = {
+      blue: 'text-blue-600', purple: 'text-purple-600', cyan: 'text-cyan-600',
+      orange: 'text-orange-600', green: 'text-green-600', red: 'text-red-600',
+      amber: 'text-amber-600', pink: 'text-pink-600', rose: 'text-rose-600',
+      violet: 'text-violet-600', indigo: 'text-indigo-600', teal: 'text-teal-600',
+      yellow: 'text-yellow-600', sky: 'text-sky-600'
+    }
+    return iconColors[color] || 'text-blue-600'
   }
 
   return (
@@ -628,10 +944,44 @@ export default function ProcedureTemplates({
 
       {isExpanded && (
         <div className="p-4 sm:p-6">
+          {/* Category Tabs */}
+          {!selectedProcedure && (
+            <div className="mb-4">
+              <div className="flex rounded-lg bg-clinical-100 p-1">
+                <button
+                  onClick={() => setCategory('medical')}
+                  className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    category === 'medical'
+                      ? 'bg-white text-clinical-800 shadow-sm'
+                      : 'text-clinical-600 hover:text-clinical-800'
+                  }`}
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <Scissors className="w-4 h-4" />
+                    Medical
+                  </span>
+                </button>
+                <button
+                  onClick={() => setCategory('cosmetic')}
+                  className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                    category === 'cosmetic'
+                      ? 'bg-white text-clinical-800 shadow-sm'
+                      : 'text-clinical-600 hover:text-clinical-800'
+                  }`}
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <Syringe className="w-4 h-4" />
+                    Cosmetic
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Procedure Buttons */}
           {!selectedProcedure && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-              {Object.entries(PROCEDURE_TEMPLATES).map(([key, template]) => {
+              {Object.entries(category === 'medical' ? MEDICAL_PROCEDURES : COSMETIC_PROCEDURES).map(([key, template]) => {
                 const Icon = template.icon
                 return (
                   <button
@@ -639,7 +989,7 @@ export default function ProcedureTemplates({
                     onClick={() => handleProcedureSelect(key as keyof typeof PROCEDURE_TEMPLATES)}
                     className={`p-4 rounded-lg border-2 border-transparent transition-all text-left ${getColorClasses(template.color, false)} hover:border-clinical-200`}
                   >
-                    <Icon className={`w-5 h-5 mb-2 ${template.color === 'blue' ? 'text-blue-600' : template.color === 'purple' ? 'text-purple-600' : template.color === 'cyan' ? 'text-cyan-600' : template.color === 'orange' ? 'text-orange-600' : template.color === 'green' ? 'text-green-600' : template.color === 'red' ? 'text-red-600' : 'text-amber-600'}`} />
+                    <Icon className={`w-5 h-5 mb-2 ${getIconColorClass(template.color)}`} />
                     <div className="font-medium text-sm text-clinical-800">{template.name}</div>
                     <div className="text-xs text-clinical-500 mt-1">{template.cptCodes[0].code}</div>
                   </button>
