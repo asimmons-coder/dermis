@@ -118,6 +118,83 @@ const DEFAULT_ANALYTICS: PracticeAnalytics = {
 }
 
 // Demo mode data for impressive presentations
+const DEMO_DASHBOARD: DashboardData = {
+  appointments: [
+    {
+      id: '1',
+      type: 'follow_up',
+      chiefComplaint: 'Suspicious mole check - 3 month follow-up',
+      status: 'checked_in',
+      scheduledAt: new Date().setHours(9, 0, 0, 0).toString(),
+      patient: { id: 'p1', name: 'Sarah Johnson' },
+      provider: { id: 'pr1', name: 'Dr. Chen', firstName: 'Sarah' }
+    },
+    {
+      id: '2',
+      type: 'new_patient',
+      chiefComplaint: 'Acne evaluation - new patient',
+      status: 'scheduled',
+      scheduledAt: new Date().setHours(9, 30, 0, 0).toString(),
+      patient: { id: 'p2', name: 'Michael Torres' },
+      provider: { id: 'pr1', name: 'Dr. Chen', firstName: 'Sarah' }
+    },
+    {
+      id: '3',
+      type: 'procedure',
+      chiefComplaint: 'Mohs surgery - BCC left temple',
+      status: 'in_progress',
+      scheduledAt: new Date().setHours(10, 0, 0, 0).toString(),
+      patient: { id: 'p3', name: 'Robert Williams' },
+      provider: { id: 'pr1', name: 'Dr. Chen', firstName: 'Sarah' }
+    },
+    {
+      id: '4',
+      type: 'follow_up',
+      chiefComplaint: 'Psoriasis - biologic check',
+      status: 'scheduled',
+      scheduledAt: new Date().setHours(11, 0, 0, 0).toString(),
+      patient: { id: 'p4', name: 'Emily Chen' },
+      provider: { id: 'pr2', name: 'Dr. Park', firstName: 'Michael' }
+    },
+    {
+      id: '5',
+      type: 'cosmetic',
+      chiefComplaint: 'Botox touch-up',
+      status: 'scheduled',
+      scheduledAt: new Date().setHours(14, 0, 0, 0).toString(),
+      patient: { id: 'p5', name: 'Jennifer Adams' },
+      provider: { id: 'pr3', name: 'NP Rodriguez', firstName: 'Emily' }
+    }
+  ],
+  unsignedNotes: [
+    {
+      id: 'n1',
+      encounterId: 'e1',
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      chiefComplaint: 'Eczema flare - prescribed topical steroids',
+      patient: { id: 'p6', name: 'David Kim' }
+    },
+    {
+      id: 'n2',
+      encounterId: 'e2',
+      createdAt: new Date(Date.now() - 172800000).toISOString(),
+      chiefComplaint: 'Shave biopsy x2 - awaiting pathology',
+      patient: { id: 'p7', name: 'Amanda Foster' }
+    }
+  ],
+  recentPatients: [
+    { id: 'p1', name: 'Sarah Johnson', mrn: 'MRN-001234', lastVisit: new Date(Date.now() - 86400000).toISOString() },
+    { id: 'p3', name: 'Robert Williams', mrn: 'MRN-002456', lastVisit: new Date(Date.now() - 172800000).toISOString() },
+    { id: 'p6', name: 'David Kim', mrn: 'MRN-003789', lastVisit: new Date(Date.now() - 259200000).toISOString() },
+    { id: 'p4', name: 'Emily Chen', mrn: 'MRN-004012', lastVisit: new Date(Date.now() - 432000000).toISOString() }
+  ],
+  stats: {
+    todayAppointments: 12,
+    unsignedCount: 2,
+    recentPatientsCount: 47
+  }
+}
+
 const DEMO_ANALYTICS: PracticeAnalytics = {
   revenue: {
     mtd: 187450,
@@ -228,6 +305,16 @@ export default function DashboardPage() {
     setError(null)
 
     try {
+      // Use demo data for everything when in demo mode
+      if (demoMode) {
+        setData(DEMO_DASHBOARD)
+        setAnalytics(DEMO_ANALYTICS)
+        setPracticeAlerts(DEMO_ALERTS)
+        setIsLoading(false)
+        return
+      }
+
+      // Fetch real data when not in demo mode
       const practiceId = '00000000-0000-0000-0000-000000000001'
       const baseUrl = selectedProvider
         ? `practiceId=${practiceId}&providerId=${selectedProvider.id}`
@@ -243,17 +330,12 @@ export default function DashboardPage() {
         setError('Failed to load dashboard data')
       }
 
-      // Use demo data or fetch real analytics based on mode
-      if (demoMode) {
-        setAnalytics(DEMO_ANALYTICS)
-        setPracticeAlerts(DEMO_ALERTS)
-      } else {
-        const analyticsRes = await fetch(`/api/analytics?${baseUrl}`)
-        if (analyticsRes.ok) {
-          const analyticsData = await analyticsRes.json()
-          setAnalytics(analyticsData.analytics || DEFAULT_ANALYTICS)
-          setPracticeAlerts(analyticsData.practiceAlerts || [])
-        }
+      // Fetch real analytics
+      const analyticsRes = await fetch(`/api/analytics?${baseUrl}`)
+      if (analyticsRes.ok) {
+        const analyticsData = await analyticsRes.json()
+        setAnalytics(analyticsData.analytics || DEFAULT_ANALYTICS)
+        setPracticeAlerts(analyticsData.practiceAlerts || [])
       }
     } catch (err) {
       setError('Failed to load dashboard data')
