@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { isStediConfigured, getStediMode } from '@/lib/stedi/client'
+import { checkPatientEligibility, PAYER_IDS } from '@/lib/stedi/eligibility'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+
+// Map carrier names to Stedi payer IDs
+function getPayerId(carrier: string): string {
+  const carrierLower = carrier.toLowerCase()
+  if (carrierLower.includes('aetna')) return PAYER_IDS.AETNA
+  if (carrierLower.includes('anthem')) return PAYER_IDS.ANTHEM
+  if (carrierLower.includes('blue') || carrierLower.includes('bcbs')) return PAYER_IDS.BCBS
+  if (carrierLower.includes('cigna')) return PAYER_IDS.CIGNA
+  if (carrierLower.includes('humana')) return PAYER_IDS.HUMANA
+  if (carrierLower.includes('united') || carrierLower.includes('uhc')) return PAYER_IDS.UNITED
+  if (carrierLower.includes('medicare')) return PAYER_IDS.MEDICARE
+  // Default to Aetna for testing
+  return PAYER_IDS.AETNA
+}
 
 // Mock eligibility responses based on common insurance plans
 const ELIGIBILITY_RESPONSES = {
@@ -127,7 +143,7 @@ const ELIGIBILITY_RESPONSES = {
 
 export async function POST(request: NextRequest) {
   try {
-    const { patientId } = await request.json()
+    const { patientId, forceStedi } = await request.json()
 
     if (!patientId) {
       return NextResponse.json({ error: 'Patient ID required' }, { status: 400 })
@@ -144,18 +160,101 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
     }
 
+    const carrier = patient.insurance_primary?.carrier || ''
+
+    // ==========================================================================
+    // Try Stedi real-time eligibility if configured
+    // ==========================================================================
+    if (isStediConfigured() && patient.insurance_primary?.member_id) {
+      try {
+        console.log(`[Eligibility] Using Stedi (${getStediMode()} mode) for patient ${patientId}`)
+
+        const stediResult = await checkPatientEligibility({
+          patientFirstName: patient.first_name,
+          patientLastName: patient.last_name,
+          patientDOB: patient.date_of_birth,
+          memberId: patient.insurance_primary.member_id,
+          payerId: getPayerId(carrier),
+          providerName: 'Novice Group Dermatology',
+          providerNPI: '1234567890', // TODO: Get from practice settings
+        })
+
+        if (stediResult.success && stediResult.eligibility) {
+          const elig = stediResult.eligibility
+
+          // Convert Stedi response to dermis format
+          const response = {
+            verified_at: new Date().toISOString(),
+            source: 'stedi',
+            mode: getStediMode(),
+            payer: carrier,
+            payer_id: getPayerId(carrier),
+            member_id: elig.memberId,
+            patient: {
+              id: patient.id,
+              name: `${patient.first_name} ${patient.last_name}`,
+              dob: patient.date_of_birth,
+            },
+            status: elig.isActive ? 'active' : 'inactive',
+            coverage_level: elig.isActive ? 'verified' : 'none',
+            plan_name: elig.planName || patient.insurance_primary?.plan || 'Unknown Plan',
+            group_number: elig.groupNumber,
+            group_name: elig.groupName,
+            subscriber: {
+              name: elig.subscriberName,
+              relationship: 'Subscriber',
+            },
+            benefits: {
+              copay_office_visit: elig.copays.officeVisit || null,
+              copay_specialist: elig.copays.specialist || null,
+              copay_urgent_care: elig.copays.urgentCare || null,
+              copay_er: elig.copays.emergencyRoom || null,
+              deductible_individual: elig.individual.deductible.total,
+              deductible_family: null,
+              deductible_met: elig.individual.deductible.met,
+              deductible_remaining: elig.individual.deductible.remaining,
+              out_of_pocket_max: elig.individual.outOfPocketMax.total,
+              out_of_pocket_met: elig.individual.outOfPocketMax.met,
+              coinsurance: elig.individual.coinsurancePercent,
+              prior_auth_required: elig.coverage.priorAuthRequired ? ['Some services'] : [],
+            },
+            dermatology_specific: {
+              skin_cancer_screening: elig.coverage.preventiveCare ? 'Covered' : 'Not verified',
+              biopsy: elig.coverage.diagnosticLab ? 'Covered' : 'Not verified',
+              surgical: elig.coverage.surgicalProcedures ? 'Covered' : 'Not verified',
+            },
+            plan_type: elig.planType,
+            hsa_eligible: elig.isHDHP,
+            clearinghouse: 'Stedi',
+            transaction_id: elig.raw.meta?.traceId || `stedi-${Date.now()}`,
+          }
+
+          return NextResponse.json({ eligibility: response })
+        } else {
+          console.warn(`[Eligibility] Stedi check failed: ${stediResult.error}, falling back to mock`)
+        }
+      } catch (stediError) {
+        console.error('[Eligibility] Stedi error, falling back to mock:', stediError)
+      }
+    }
+
+    // ==========================================================================
+    // Fallback to mock eligibility data
+    // ==========================================================================
+    console.log(`[Eligibility] Using mock data for patient ${patientId}`)
+
     // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1200))
+    await new Promise(resolve => setTimeout(resolve, 800))
 
     // Determine which mock response to use based on insurance carrier
-    const carrier = patient.insurance_primary?.carrier?.toLowerCase() || ''
+    const carrierLower = carrier.toLowerCase()
     let eligibilityData
 
-    if (carrier.includes('blue') || carrier.includes('bcbs')) {
+    if (carrierLower.includes('blue') || carrierLower.includes('bcbs')) {
       eligibilityData = ELIGIBILITY_RESPONSES.active_good
-    } else if (carrier.includes('aetna') || carrier.includes('hmo')) {
+    } else if (carrierLower.includes('aetna') || carrierLower.includes('hmo')) {
       eligibilityData = ELIGIBILITY_RESPONSES.active_hmo
-    } else if (carrier.includes('united') || carrier.includes('uhc')) {
+    } else if (carrierLower.includes('united') || carrierLower.includes('uhc')) {
       eligibilityData = ELIGIBILITY_RESPONSES.active_high_deductible
     } else if (!patient.insurance_primary?.carrier) {
       eligibilityData = ELIGIBILITY_RESPONSES.inactive
@@ -167,8 +266,9 @@ export async function POST(request: NextRequest) {
     // Merge with patient's actual insurance data
     const response = {
       verified_at: new Date().toISOString(),
+      source: 'mock',
       payer: patient.insurance_primary?.carrier || 'Unknown',
-      payer_id: 'PAYERID-' + Math.random().toString(36).substr(2, 8).toUpperCase(),
+      payer_id: 'MOCK-' + Math.random().toString(36).substr(2, 8).toUpperCase(),
       member_id: patient.insurance_primary?.member_id || 'Unknown',
       patient: {
         id: patient.id,
@@ -178,8 +278,8 @@ export async function POST(request: NextRequest) {
       ...eligibilityData,
       // Override plan name with actual if available
       plan_name: patient.insurance_primary?.plan || eligibilityData.plan_name,
-      clearinghouse: 'Availity',
-      transaction_id: `270-${Date.now()}`
+      clearinghouse: 'Mock (Demo)',
+      transaction_id: `mock-270-${Date.now()}`
     }
 
     return NextResponse.json({ eligibility: response })

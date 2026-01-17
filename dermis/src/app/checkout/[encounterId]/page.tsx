@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import AppHeader from '@/components/AppHeader'
+import CalculationBreakdown from '@/components/CalculationBreakdown'
 import {
   DollarSign,
   Plus,
@@ -14,7 +15,15 @@ import {
   Shield,
   Clock,
   Check,
+  Calculator,
 } from 'lucide-react'
+import {
+  calculateInsuredCharges,
+  calculateSelfPayCharges,
+  type InsuranceBenefits,
+  type CPTCode,
+  type CalculationResult,
+} from '@/lib/billing/calculator'
 
 interface CheckoutPageProps {
   params: { encounterId: string }
@@ -51,6 +60,9 @@ interface InsuranceDetails {
   deductibleRemaining: number
   coinsurancePercent: number
   isDeductibleMet: boolean
+  isHDHP?: boolean
+  hsaEligible?: boolean
+  procedureCopay?: number
 }
 
 interface OutstandingCharge {
@@ -75,8 +87,10 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
   const [hasInsurance, setHasInsurance] = useState(false)
   const [feeSchedule, setFeeSchedule] = useState<any[]>([])
 
-  // Medical charges
+  // Medical charges - now using sophisticated calculator
   const [medicalCharges, setMedicalCharges] = useState<any[]>([])
+  const [calculationResult, setCalculationResult] = useState<CalculationResult | null>(null)
+  const [showCalculationBreakdown, setShowCalculationBreakdown] = useState(false)
 
   // Cosmetic charges
   const [cosmeticCharges, setCosmeticCharges] = useState<any[]>([])
@@ -117,12 +131,76 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
 
       // Initialize medical charges from CPT codes with sophisticated insurance logic
       if (data.encounter?.cpt_codes) {
-        const charges = data.encounter.cpt_codes.map((cpt: any) => {
-          const fee = data.feeSchedule.find((f: any) => f.cpt_code === cpt.code)?.standard_fee || DEFAULT_FEES[cpt.code] || 0
-
-          return calculateMedicalCharge(cpt, fee, data.hasInsurance, data.insuranceDetails)
+        // Build fee schedule map
+        const feeScheduleMap: Record<string, number> = {}
+        data.feeSchedule?.forEach((f: any) => {
+          feeScheduleMap[f.cpt_code] = f.standard_fee
         })
-        setMedicalCharges(charges)
+        // Merge with defaults
+        Object.keys(DEFAULT_FEES).forEach(code => {
+          if (!feeScheduleMap[code]) feeScheduleMap[code] = DEFAULT_FEES[code]
+        })
+
+        // Convert CPT codes to the format expected by calculator
+        const cptCodes: CPTCode[] = data.encounter.cpt_codes.map((cpt: any) => ({
+          code: cpt.code,
+          description: cpt.description,
+          units: cpt.units || 1,
+          modifiers: cpt.modifiers,
+        }))
+
+        if (data.hasInsurance && data.insuranceDetails) {
+          // Use sophisticated calculator for insured patients
+          const insuranceBenefits: InsuranceBenefits = {
+            carrier: data.insuranceDetails.carrier,
+            plan: data.insuranceDetails.plan,
+            memberId: data.insuranceDetails.memberId,
+            officeVisitCopay: data.insuranceDetails.copay,
+            specialistCopay: data.insuranceDetails.copay,
+            procedureCopay: data.insuranceDetails.procedureCopay,
+            deductibleTotal: data.insuranceDetails.deductibleTotal,
+            deductibleMet: data.insuranceDetails.deductibleMet,
+            deductibleRemaining: data.insuranceDetails.deductibleRemaining,
+            isDeductibleMet: data.insuranceDetails.isDeductibleMet,
+            coinsurancePercent: data.insuranceDetails.coinsurancePercent,
+            isHDHP: data.insuranceDetails.isHDHP,
+            hsaEligible: data.insuranceDetails.hsaEligible,
+          }
+
+          const result = calculateInsuredCharges(cptCodes, feeScheduleMap, insuranceBenefits)
+          setCalculationResult(result)
+
+          // Convert to the format the existing UI expects
+          const charges = result.charges.map(c => ({
+            code: c.code,
+            description: c.description,
+            fee: c.totalFee,
+            isSelfPay: false,
+            copay: c.copayApplied,
+            deductibleApplied: c.deductibleApplied,
+            coinsurance: c.coinsuranceAmount,
+            patientResponsibility: c.patientResponsibility,
+            breakdown: c.breakdown.join(' | '),
+            deductibleNote: c.appliedToDeductible ? 'Applied to deductible' : (data.insuranceDetails.isDeductibleMet ? 'Deductible met ✓' : ''),
+            category: c.category,
+            isHsaEligible: c.isHsaEligible,
+          }))
+          setMedicalCharges(charges)
+        } else {
+          // Self-pay calculation
+          const selfPayResult = calculateSelfPayCharges(cptCodes, feeScheduleMap, applySelfPayDiscount ? SELF_PAY_DISCOUNT_PERCENT : 0)
+          const charges = selfPayResult.charges.map(c => ({
+            code: c.code,
+            description: c.description,
+            fee: c.totalFee,
+            isSelfPay: true,
+            selfPayDiscount: c.discount,
+            patientResponsibility: c.patientResponsibility,
+            breakdown: `Full fee: $${c.totalFee.toFixed(2)}${c.discount > 0 ? ` - ${SELF_PAY_DISCOUNT_PERCENT}% self-pay discount` : ''}`,
+          }))
+          setMedicalCharges(charges)
+          setCalculationResult(null)
+        }
       }
 
       // Initialize cosmetic charges from treatments
@@ -230,20 +308,46 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
 
   // Recalculate medical charges when self-pay discount changes
   useEffect(() => {
-    if (!hasInsurance && medicalCharges.length > 0) {
-      setMedicalCharges(charges =>
-        charges.map(c => ({
-          ...c,
-          selfPayDiscount: applySelfPayDiscount ? c.fee * (SELF_PAY_DISCOUNT_PERCENT / 100) : 0,
-          patientResponsibility: applySelfPayDiscount ? c.fee * (1 - SELF_PAY_DISCOUNT_PERCENT / 100) : c.fee,
-          breakdown: `Full fee: $${c.fee.toFixed(2)}${applySelfPayDiscount ? ` - ${SELF_PAY_DISCOUNT_PERCENT}% self-pay discount` : ''}`,
-        }))
+    if (!hasInsurance && encounter?.cpt_codes) {
+      // Build fee schedule map
+      const feeScheduleMap: Record<string, number> = {}
+      feeSchedule?.forEach((f: any) => {
+        feeScheduleMap[f.cpt_code] = f.standard_fee
+      })
+      Object.keys(DEFAULT_FEES).forEach(code => {
+        if (!feeScheduleMap[code]) feeScheduleMap[code] = DEFAULT_FEES[code]
+      })
+
+      const cptCodes: CPTCode[] = encounter.cpt_codes.map((cpt: any) => ({
+        code: cpt.code,
+        description: cpt.description,
+        units: cpt.units || 1,
+      }))
+
+      const selfPayResult = calculateSelfPayCharges(
+        cptCodes,
+        feeScheduleMap,
+        applySelfPayDiscount ? SELF_PAY_DISCOUNT_PERCENT : 0
       )
+
+      const charges = selfPayResult.charges.map(c => ({
+        code: c.code,
+        description: c.description,
+        fee: c.totalFee,
+        isSelfPay: true,
+        selfPayDiscount: c.discount,
+        patientResponsibility: c.patientResponsibility,
+        breakdown: `Full fee: $${c.totalFee.toFixed(2)}${c.discount > 0 ? ` - ${SELF_PAY_DISCOUNT_PERCENT}% self-pay discount` : ''}`,
+      }))
+      setMedicalCharges(charges)
     }
-  }, [applySelfPayDiscount])
+  }, [applySelfPayDiscount, hasInsurance, encounter, feeSchedule])
 
   // Calculations
-  const medicalTotal = medicalCharges.reduce((sum, c) => sum + c.patientResponsibility, 0)
+  // For insured patients, use the sophisticated calculation result which includes copay
+  const medicalTotal = calculationResult
+    ? calculationResult.totalPatientResponsibility
+    : medicalCharges.reduce((sum, c) => sum + c.patientResponsibility, 0)
 
   const cosmeticSubtotal = cosmeticCharges.reduce((sum, c) => sum + c.subtotal, 0)
   const totalDiscounts = alleDiscount + aspireDiscount + customDiscount
@@ -493,7 +597,22 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
                 </div>
               </div>
             </div>
+            {insuranceDetails.isHDHP && (
+              <div className="mt-4 pt-4 border-t border-blue-200 flex items-center gap-2 text-sm text-purple-700">
+                <Calculator className="w-4 h-4" />
+                <span className="font-medium">HDHP - HSA Eligible Plan</span>
+              </div>
+            )}
           </div>
+        )}
+
+        {/* Calculation Breakdown - For insured patients */}
+        {hasInsurance && calculationResult && medicalCharges.length > 0 && (
+          <CalculationBreakdown
+            result={calculationResult}
+            insuranceCarrier={insuranceDetails?.carrier}
+            isHDHP={insuranceDetails?.isHDHP}
+          />
         )}
 
         {/* Section 1: Medical Charges */}
@@ -526,12 +645,24 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
                       <div className="font-medium text-clinical-800">
                         {charge.code} - {charge.description}
                       </div>
-                      <div className="text-sm text-clinical-600 mt-1">{charge.breakdown}</div>
-                      {charge.deductibleNote && (
-                        <div className={`text-xs mt-1 ${charge.deductibleNote.includes('✓') ? 'text-green-600' : 'text-amber-600'}`}>
-                          {charge.deductibleNote}
+                      {charge.category && (
+                        <div className="text-xs text-clinical-500 mt-0.5 capitalize">
+                          {charge.category.replace(/_/g, ' ')}
                         </div>
                       )}
+                      <div className="text-sm text-clinical-600 mt-1">{charge.breakdown}</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        {charge.deductibleNote && (
+                          <span className={`text-xs ${charge.deductibleNote.includes('✓') ? 'text-green-600' : 'text-amber-600'}`}>
+                            {charge.deductibleNote}
+                          </span>
+                        )}
+                        {charge.isHsaEligible && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
+                            HSA eligible
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="text-right">
                       <div className="font-semibold text-clinical-800">${charge.patientResponsibility.toFixed(2)}</div>
@@ -540,10 +671,39 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
                   </div>
                 </div>
               ))}
+
+              {/* Show copay separately if applicable */}
+              {calculationResult && calculationResult.totalCopay > 0 && (
+                <div className="py-3 border-b border-clinical-100 bg-green-50 -mx-6 px-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-green-600" />
+                      <span className="font-medium text-green-800">
+                        {calculationResult.copayDetails.type === 'specialist' ? 'Specialist' : 'Office'} Copay
+                      </span>
+                    </div>
+                    <div className="font-semibold text-green-700">
+                      ${calculationResult.totalCopay.toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-between items-center pt-3 font-semibold">
                 <div className="text-clinical-800">Medical Total:</div>
                 <div className="text-dermis-600 text-lg">${medicalTotal.toFixed(2)}</div>
               </div>
+
+              {/* HSA summary for HDHP patients */}
+              {calculationResult && calculationResult.totalHsaEligible > 0 && (
+                <div className="flex justify-between items-center text-sm text-purple-700 bg-purple-50 -mx-6 px-6 py-2">
+                  <div className="flex items-center gap-1">
+                    <Calculator className="w-4 h-4" />
+                    <span>HSA-Eligible Amount:</span>
+                  </div>
+                  <span className="font-medium">${calculationResult.totalHsaEligible.toFixed(2)}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
